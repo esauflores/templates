@@ -1,27 +1,17 @@
 // External
 import type { Context } from "hono";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // App
 import type { Bindings } from "@/env";
-
-// Test Setup
-vi.mock("@/infrastructure/auth", async () => {
-  const { auth } = await import("@/tests/fixtures/auth");
-  return { auth };
-});
-
-vi.mock("@/infrastructure/db", async () => {
-  const { db } = await import("@/tests/fixtures/db");
-  return { db };
-});
+import { testBindings } from "@/env";
 
 // Middleware
 import { requireVerifiedApiKey, clearVerifiedCache } from "./auth";
 
-// Test Fixtures
-import { makeUser, makeKey, makeVerifiedUserWithKey } from "@/tests/fixtures/auth";
-import { resetDatabase } from "@/tests/fixtures/db";
+// Test Utilities
+import { makeKey, makeUser, makeVerifiedUserWithKey } from "@/helpers/test/better-auth";
+import { resetDatabase } from "@/helpers/test/pglite";
 
 // Helper Functions
 const makeContext = (apiKeyHeader: string | undefined) =>
@@ -29,6 +19,7 @@ const makeContext = (apiKeyHeader: string | undefined) =>
     req: {
       header: (name: string) => (name.toLowerCase() === "x-api-key" ? apiKeyHeader : undefined),
     },
+    env: testBindings,
   }) as unknown as Context<{ Bindings: Bindings }>;
 
 const makeNext = () => vi.fn().mockResolvedValue(undefined);

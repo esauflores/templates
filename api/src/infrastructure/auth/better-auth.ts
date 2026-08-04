@@ -18,6 +18,7 @@ export const auth = (env: Bindings) =>
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db(env), { provider: "pg", schema }),
+    logger: { disabled: env.LOG_LEVEL === "silent" },
     emailAndPassword: { enabled: true },
     emailVerification: {
       sendOnSignUp: true,
