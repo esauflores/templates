@@ -29,7 +29,7 @@ const makeContext = (apiKeyHeader: string | undefined) =>
     req: {
       header: (name: string) => (name.toLowerCase() === "x-api-key" ? apiKeyHeader : undefined),
     },
-  }) as Context<{ Bindings: Bindings }>;
+  }) as unknown as Context<{ Bindings: Bindings }>;
 
 const makeNext = () => vi.fn().mockResolvedValue(undefined);
 
