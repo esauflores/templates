@@ -1,6 +1,3 @@
 allowBuilds:
   esbuild: true
   workerd: true
-
-overrides:
-  drizzle-orm: 1.0.0-rc.4
