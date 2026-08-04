@@ -1,0 +1,11 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "api"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+
+# Secrets — set with `pnpm dlx wrangler secret put DATABASE_URL`.
+# For local dev, put secrets in .dev.vars (loaded by wrangler dev).
