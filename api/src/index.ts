@@ -20,7 +20,7 @@ app.onError(onError);
 app.use(
   "*",
   cors({
-    origin: (_origin, c) => c.env.BETTER_AUTH_URL,
+    origin: (_origin, c) => c.env.WEB_ORIGIN ?? c.env.API_ORIGIN,
     allowHeaders: ["Accept", "Content-Type", "X-API-Key", "Authorization"],
     credentials: true,
   }),

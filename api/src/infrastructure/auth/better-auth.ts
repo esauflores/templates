@@ -15,7 +15,7 @@ import { sendEmail } from "@/infrastructure/email";
 
 export const auth = (env: Bindings) =>
   betterAuth({
-    baseURL: env.BETTER_AUTH_URL,
+    baseURL: env.API_ORIGIN + "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db(env), { provider: "pg", schema }),
     logger: { disabled: env.LOG_LEVEL === "silent" },
@@ -33,7 +33,7 @@ export const auth = (env: Bindings) =>
         });
       },
     },
-    trustedOrigins: [env.BETTER_AUTH_URL],
+    trustedOrigins: [env.API_ORIGIN, env.WEB_ORIGIN],
     plugins: [
       apiKey({
         defaultPrefix: "pk_",
