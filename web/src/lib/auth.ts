@@ -1,0 +1,9 @@
+import { apiKeyClient } from "@better-auth/api-key/client";
+import { createAuthClient } from "better-auth/react";
+
+export const authClient = createAuthClient({
+  baseURL: import.meta.env.PUBLIC_API_URL,
+  plugins: [apiKeyClient()],
+});
+
+export const { signIn, signUp, signOut, useSession } = authClient;

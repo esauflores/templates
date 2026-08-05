@@ -1,0 +1,10 @@
+---
+import Base from "../layouts/Base.astro";
+import { SignInForm } from "../components/SignInForm";
+---
+
+<Base title="Sign in">
+  <div class="flex min-h-[60vh] items-center justify-center">
+    <SignInForm client:load />
+  </div>
+</Base>

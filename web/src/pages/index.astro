@@ -1,0 +1,28 @@
+---
+import Base from "../layouts/Base.astro";
+---
+
+<Base title="Web">
+  <section class="flex flex-col items-start gap-4">
+    <h1 class="text-4xl font-bold tracking-tight">A frontend for the API.</h1>
+    <p class="max-w-prose text-zinc-600 dark:text-zinc-400">
+      Astro + React + Tailwind. Talks to the <code
+        class="rounded bg-zinc-200 px-1 dark:bg-zinc-800">api</code
+      > template via Better Auth and standard API routes.
+    </p>
+    <div class="flex gap-3">
+      <a
+        href="/sign-in"
+        class="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-50 hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+      >
+        Sign in
+      </a>
+      <a
+        href="/dashboard"
+        class="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+      >
+        Dashboard
+      </a>
+    </div>
+  </section>
+</Base>
