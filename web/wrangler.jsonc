@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "web",
+  // Latest stable Workers runtime date; bump when needed
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Astro build output; matches astro.config.mjs (no custom outDir)
+  "pages_build_output_dir": "dist",
+}

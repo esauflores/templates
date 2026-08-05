@@ -143,6 +143,8 @@ pnpm build
 pnpm exec wrangler pages deploy ./dist
 ```
 
+The `wrangler.jsonc` declares the project name, compatibility date, and build output directory. Set `PUBLIC_API_URL` (and any other env vars) in the Cloudflare Pages dashboard or via `wrangler pages secret put`.
+
 ---
 
 # Adding Pages
