@@ -2,6 +2,7 @@
 import { swaggerUI } from "@hono/swagger-ui";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 
 // App
 import type { Bindings } from "@/env";
@@ -27,6 +28,7 @@ app.use(
     credentials: true,
   }),
 );
+app.use(secureHeaders({ crossOriginResourcePolicy: "cross-origin" }));
 
 app.get("/healthz", (c) => c.json({ ok: true }));
 
