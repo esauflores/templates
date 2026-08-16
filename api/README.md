@@ -432,6 +432,8 @@ The API never exposes:
 
 # Environment Configuration
 
+For local dev, copy `.dev.vars.example` to `.dev.vars` and fill in real values — `.dev.vars` is gitignored.
+
 Environment variables are typed as the `Bindings` type in `src/env.ts` — that file is the source of truth for what's available, don't duplicate the list here.
 
 Runtime configuration is provided through Hono bindings (`c.env`) and passed explicitly into infrastructure modules (e.g. `db(env)`, `auth(env)`) — never read from `process.env` directly outside `src/env.ts`.

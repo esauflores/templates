@@ -1,0 +1,14 @@
+API_ORIGIN='http://localhost:5173'
+WEB_ORIGIN='http://localhost:4321'
+
+DB_PROVIDER='neon'
+DATABASE_URL='postgresql://user:password@host/db?sslmode=require'
+
+AUTH_PROVIDER='better-auth'
+BETTER_AUTH_SECRET='replace-with-a-32-plus-character-random-secret'
+
+EMAIL_PROVIDER='emailit'
+EMAILIT_API_KEY='replace-with-your-emailit-api-key'
+EMAILIT_FROM='No Reply <noreply@example.com>'
+
+LOG_LEVEL='info'
