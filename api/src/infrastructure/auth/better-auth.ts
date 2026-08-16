@@ -2,6 +2,7 @@
 import { apiKey } from "@better-auth/api-key";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { openAPI } from "better-auth/plugins";
 
 // App
 import type { Bindings } from "@/env";
@@ -39,5 +40,6 @@ export const auth = (env: Bindings) =>
         defaultPrefix: "pk_",
         rateLimit: { enabled: true, timeWindow: 60_000, maxRequests: 60 },
       }),
+      openAPI(),
     ],
   });

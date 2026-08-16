@@ -1,16 +1,16 @@
+// App
+import type { Bindings } from "@/env";
+
 import { sendEmail as emailitSend, type SendEmailOptions } from "./emailit";
 import { sendEmail as noopSend } from "./noop";
 
-const provider = process.env.EMAIL_PROVIDER ?? "emailit";
-
-export const sendEmail = (() => {
-  switch (provider) {
-    case "emailit":
-      return emailitSend;
+export const sendEmail = (env: Bindings, opts: SendEmailOptions) => {
+  switch (env.EMAIL_PROVIDER) {
     case "noop":
-      return noopSend;
+      return noopSend(env, opts);
+    case "emailit":
     default:
-      return emailitSend;
+      return emailitSend(env, opts);
   }
-})();
+};
 export type { SendEmailOptions };

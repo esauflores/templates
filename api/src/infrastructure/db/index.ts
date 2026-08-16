@@ -1,15 +1,15 @@
+// App
+import type { Bindings } from "@/env";
+
 import { db as neon } from "./neon";
 import { db as pglite } from "./pglite";
 
-const provider = process.env.DB_PROVIDER ?? "neon";
-
-export const db = (() => {
-  switch (provider) {
-    case "neon":
-      return neon;
+export const db = (env: Bindings) => {
+  switch (env.DB_PROVIDER) {
     case "pglite":
-      return pglite;
+      return pglite(env);
+    case "neon":
     default:
-      return neon;
+      return neon(env);
   }
-})();
+};

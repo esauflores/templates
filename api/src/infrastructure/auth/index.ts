@@ -1,14 +1,12 @@
+// App
+import type { Bindings } from "@/env";
+
 import { auth as betterAuth } from "./better-auth";
 
-const provider = process.env.AUTH_PROVIDER ?? "better-auth";
-
-export const auth = (() => {
-  switch (provider) {
+export const auth = (env: Bindings) => {
+  switch (env.AUTH_PROVIDER) {
     case "better-auth":
-      return betterAuth;
-    // case "clerk": return clerk;
-    // case "noop": return noop;
     default:
-      return betterAuth;
+      return betterAuth(env);
   }
-})();
+};

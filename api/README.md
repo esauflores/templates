@@ -14,9 +14,9 @@ The project follows a modular architecture with clear boundaries:
 src/
 ├── db/
 ├── features/
+├── helpers/
 ├── infrastructure/
 ├── middleware/
-├── tests/
 ├── env.ts
 └── index.ts
 ```
@@ -105,7 +105,7 @@ Example:
 
 ```
 features/
-└── markers/
+└── widgets/
     ├── routes.ts
     ├── service.ts
     └── types.ts
@@ -115,23 +115,23 @@ Features should not create infrastructure clients directly.
 
 ---
 
-### `tests/`
+### `helpers/`
 
 Contains testing utilities.
 
 Structure:
 
 ```
-tests/
-├── fixtures/
-└── data/
+helpers/
+└── test/
+    ├── better-auth.ts
+    └── pglite.ts
 ```
 
 Responsibilities:
 
-- Test database setup
-- Authentication fixtures
-- Test data generators
+- Test database reset/migration
+- Authentication test helpers (real signups, not mocks)
 
 ---
 
@@ -169,6 +169,15 @@ Feature Routes
     v
 Error Handler
 ```
+
+---
+
+# API Documentation
+
+Routes registered with `.openapi()` (via `OpenAPIHono`) generate an OpenAPI spec automatically — no hand-written docs to keep in sync.
+
+- `GET /doc` — the merged OpenAPI JSON (app routes + Better Auth's routes, see `src/infrastructure/openapi.ts`)
+- `GET /docs` — Swagger UI, reading from `/doc`
 
 ---
 
@@ -233,8 +242,11 @@ The project uses:
 Database client configuration lives in:
 
 ```
-src/infrastructure/db/neon.ts
+src/infrastructure/db/neon.ts    # production — Neon over HTTP
+src/infrastructure/db/pglite.ts  # tests — in-memory Postgres
 ```
+
+`src/infrastructure/db/index.ts` picks between them based on the `DB_PROVIDER` binding (defaults to `neon`). The same pattern is used for `infrastructure/auth` (`AUTH_PROVIDER`) and `infrastructure/email` (`EMAIL_PROVIDER`).
 
 Schema definitions live in:
 
@@ -334,33 +346,17 @@ Local Test Environment
 
 ---
 
-## Fixtures
+## Test Helpers
 
-Fixtures replace production infrastructure.
-
-Example:
+Test helpers replace external services, not application code — no `vi.mock`.
 
 ```
-tests/fixtures/
-├── auth.ts
-└── db.ts
+src/helpers/test/
+├── better-auth.ts # makeUser, makeKey — real signups against Better Auth + pglite
+└── pglite.ts      # resetDatabase — drops and re-migrates the in-memory Postgres schema
 ```
 
-The authentication fixture uses:
-
-- Test database
-- Drizzle adapter
-- Test secrets
-
-Example:
-
-```ts
-vi.mock("@/infrastructure/auth", async () => {
-  const { auth } = await import("@/tests/fixtures/auth");
-
-  return { auth };
-});
-```
+`DB_PROVIDER=pglite` (set in `.env.test`) makes `infrastructure/db` resolve to the pglite client automatically, so tests exercise the real Drizzle adapter and real Better Auth flows against a real (in-memory) database.
 
 This allows testing real authentication flows without external services.
 
@@ -436,25 +432,9 @@ The API never exposes:
 
 # Environment Configuration
 
-Environment variables are typed in:
+Environment variables are typed as the `Bindings` type in `src/env.ts` — that file is the source of truth for what's available, don't duplicate the list here.
 
-```
-src/env.ts
-```
-
-Example:
-
-```ts
-export type Bindings = {
-  DATABASE_URL: string;
-  BETTER_AUTH_SECRET: string;
-  BETTER_AUTH_URL: string;
-  EMAILIT_API_KEY: string;
-  EMAILIT_FROM: string;
-};
-```
-
-Runtime configuration is provided through Hono bindings and consumed by infrastructure modules.
+Runtime configuration is provided through Hono bindings (`c.env`) and passed explicitly into infrastructure modules (e.g. `db(env)`, `auth(env)`) — never read from `process.env` directly outside `src/env.ts`.
 
 ---
 

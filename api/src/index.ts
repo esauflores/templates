@@ -1,5 +1,6 @@
 // External
-import { Hono } from "hono";
+import { swaggerUI } from "@hono/swagger-ui";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
 
 // App
@@ -7,12 +8,13 @@ import type { Bindings } from "@/env";
 
 // Infrastructure
 import { auth } from "@/infrastructure/auth";
+import { buildOpenAPIDocument } from "@/infrastructure/openapi";
 
 // Middleware
 import { requireVerifiedApiKey } from "@/middleware/auth";
 import { notFound, onError } from "@/middleware/errors";
 
-const app = new Hono<{ Bindings: Bindings }>();
+const app = new OpenAPIHono<{ Bindings: Bindings }>();
 
 app.notFound(notFound);
 app.onError(onError);
@@ -27,6 +29,10 @@ app.use(
 );
 
 app.get("/healthz", (c) => c.json({ ok: true }));
+
+// Docs - Swagger UI
+app.get("/doc", async (c) => c.json(await buildOpenAPIDocument(app, c.env)));
+app.get("/docs", swaggerUI({ url: "/doc" }));
 
 // Better Auth routes
 app.all("/api/auth/*", (c) => auth(c.env).handler(c.req.raw));
