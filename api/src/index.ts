@@ -1,6 +1,6 @@
 // External
 import { swaggerUI } from "@hono/swagger-ui";
-import { OpenAPIHono } from "@hono/zod-openapi";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 
@@ -30,7 +30,21 @@ app.use(
 );
 app.use(secureHeaders({ crossOriginResourcePolicy: "cross-origin" }));
 
-app.get("/healthz", (c) => c.json({ ok: true }));
+const healthzRoute = createRoute({
+  method: "get",
+  path: "/healthz",
+  tags: ["Health"],
+  responses: {
+    200: {
+      description: "ok",
+      content: {
+        "application/json": { schema: z.object({ ok: z.boolean() }) },
+      },
+    },
+  },
+});
+
+app.openapi(healthzRoute, (c) => c.json({ ok: true }));
 
 // Docs - Swagger UI
 app.get("/doc", async (c) => c.json(await buildOpenAPIDocument(app, c.env)));

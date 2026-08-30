@@ -61,13 +61,13 @@ File-based routes. `.astro` files are server-rendered. Components marked with `c
 
 | Var              | Purpose                                                        |
 | ---------------- | -------------------------------------------------------------- |
-| `PUBLIC_API_URL` | Base URL of the `api` template (e.g., `http://localhost:5173`) |
+| `PUBLIC_API_URL` | Base URL of the `api` template (e.g., `http://localhost:3000`) |
 
 `PUBLIC_` prefix is required for Astro to expose the var to client code.
 
 Copy `.env.example` to `.env` and point `PUBLIC_API_URL` at the running api.
 
-**The api needs `WEB_ORIGIN` set** (in `.dev.vars` or production env) to allow CORS from this web's origin. See the api template's README.
+**The api needs `WEB_ORIGIN` set** (in `.env` or production env) to allow CORS from this web's origin. See the api template's README.
 
 ---
 

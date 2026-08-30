@@ -18,7 +18,8 @@ src/
 ├── infrastructure/
 ├── middleware/
 ├── env.ts
-└── index.ts
+├── index.ts
+└── server.ts
 ```
 
 ## Folder Responsibilities
@@ -137,7 +138,9 @@ Responsibilities:
 
 # Application Entry Point
 
-`src/index.ts` composes the application.
+This is a Node process (`@hono/node-server` + `tsx`), not a Cloudflare worker.
+
+`src/index.ts` composes the application. Tests import it and call `app.request` — they never listen.
 
 Responsibilities:
 
@@ -148,6 +151,10 @@ Responsibilities:
 - Configure error handling
 
 The entry point should only compose the application and avoid business logic.
+
+`src/server.ts` is the process: load `.env`, build `bindings()`, listen on `PORT` (default `3000`).
+
+`@/` maps to `src/` (`tsconfig` + Vitest + `alias-hook.mjs` for `tsx`).
 
 Request flow:
 
@@ -432,7 +439,7 @@ The API never exposes:
 
 # Environment Configuration
 
-For local dev, copy `.dev.vars.example` to `.dev.vars` and fill in real values — `.dev.vars` is gitignored.
+For local dev, copy `.env.example` to `.env` and fill in real values — `.env` is gitignored.
 
 Environment variables are typed as the `Bindings` type in `src/env.ts` — that file is the source of truth for what's available, don't duplicate the list here.
 

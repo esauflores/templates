@@ -3,10 +3,8 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "$npm_execpath run build && vite preview",
-    "deploy": "$npm_execpath run build && wrangler deploy",
+    "dev": "tsx watch --import ./alias-hook.mjs src/server.ts",
+    "start": "tsx --import ./alias-hook.mjs src/server.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
@@ -22,26 +20,25 @@
     "@asteasolutions/zod-to-openapi": "^9.1.0",
     "@better-auth/api-key": "^1.6.25",
     "@better-auth/drizzle-adapter": "^1.6.25",
+    "@hono/node-server": "^1.19.6",
     "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-openapi": "^1.5.2",
     "@neondatabase/serverless": "^1.1.0",
     "better-auth": "^1.6.25",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-rc.4",
     "hono": "^4.12.33",
     "lru-cache": "^11.5.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.44.0",
     "@electric-sql/pglite": "^0.5.4",
     "@types/node": "^26.1.2",
-    "dotenv": "^17.4.2",
     "drizzle-kit": "1.0.0-rc.4",
     "oxfmt": "^0.61.0",
     "oxlint": "^1.76.0",
+    "tsx": "^4.20.5",
     "typescript": "^7.0.2",
-    "vite": "^8.1.4",
-    "vitest": "^4.1.10",
-    "wrangler": "^4.110.0"
+    "vitest": "^4.1.10"
   }
 }

@@ -14,7 +14,6 @@ dist-server/
 
 # deps
 node_modules/
-.wrangler
 
 # env
 .env

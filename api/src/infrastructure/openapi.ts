@@ -7,8 +7,6 @@ import type { Bindings } from "@/env";
 // Infrastructure
 import { auth } from "@/infrastructure/auth";
 
-// Static — version is a build-time constant. With `moduleResolution: "Bundler"` and
-// `resolveJsonModule: true` (default), Vite and Vitest both import JSON natively.
 import pkg from "../../package.json" with { type: "json" };
 
 /**

@@ -5,10 +5,12 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "skipLibCheck": true,
+    "noEmit": true,
     "lib": ["ESNext", "DOM"],
-    "types": ["vite/client"],
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"]
     }
-  }
+  },
+  "include": ["src"]
 }
