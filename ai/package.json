@@ -1,0 +1,33 @@
+{
+  "name": "ai",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --import ./alias-hook.mjs src/server.ts",
+    "start": "tsx --import ./alias-hook.mjs src/server.ts",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.6",
+    "@hono/swagger-ui": "^0.6.1",
+    "@hono/zod-openapi": "^1.5.2",
+    "@langchain/core": "^1.1.8",
+    "@langchain/mistralai": "^1.0.3",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.34",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "oxfmt": "^0.61.0",
+    "oxlint": "^1.77.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10"
+  }
+}

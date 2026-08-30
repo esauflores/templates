@@ -1,0 +1,31 @@
+name: ai ci
+
+on:
+  push:
+    branches: [main]
+    paths: ["ai/**", ".github/workflows/ai-ci.yml"]
+  pull_request:
+    paths: ["ai/**", ".github/workflows/ai-ci.yml"]
+
+defaults:
+  run:
+    working-directory: ai
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ai/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm run fmt:check
+      - run: pnpm run typecheck
+      - run: pnpm run test
