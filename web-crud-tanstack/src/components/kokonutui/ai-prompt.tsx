@@ -83,13 +83,7 @@ export function AiPrompt({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button
-          type="button"
-          size="icon-xs"
-          className="rounded-lg"
-          disabled={!value.trim() || disabled}
-          onClick={send}
-        >
+        <Button type="button" size="icon-xs" className="rounded-lg" disabled={!value.trim() || disabled} onClick={send}>
           <ArrowUp />
         </Button>
       </div>

@@ -51,7 +51,11 @@ export const estimateTokens = (text: string) => Math.max(1, Math.round(text.leng
 // --- Mock reply generation -------------------------------------------------
 
 const canned = (messages: ChatMessage[]): string => {
-  const last = [...messages].reverse().find((m) => m.role === "user")?.content.toLowerCase() ?? "";
+  const last =
+    [...messages]
+      .reverse()
+      .find((m) => m.role === "user")
+      ?.content.toLowerCase() ?? "";
   if (/\bcode\b|function|bug|typescript|react/.test(last)) {
     return "Here's a tightened version:\n\n```ts\nconst sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);\n```\n\n- pure, no mutation\n- `O(n)`\n- returns `0` for an empty array";
   }

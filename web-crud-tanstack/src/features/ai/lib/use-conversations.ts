@@ -35,10 +35,7 @@ export function useConversations() {
     return id;
   }, [persist]);
 
-  const remove = useCallback(
-    (id: string) => persist(load().filter((c) => c.id !== id)),
-    [persist],
-  );
+  const remove = useCallback((id: string) => persist(load().filter((c) => c.id !== id)), [persist]);
 
   const rename = useCallback(
     (id: string, title: string) => persist(load().map((c) => (c.id === id ? { ...c, title } : c))),

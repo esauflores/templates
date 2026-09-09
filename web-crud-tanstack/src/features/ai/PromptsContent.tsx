@@ -83,7 +83,10 @@ export const PromptsContent = () => {
               deleteLabel={row.original.title}
               onEdit={() => setEditing(row.original)}
               onDuplicate={() =>
-                create({ ...submit(row.original), title: `${row.original.title} (copy)` }, `${row.original.title} (copy)`)
+                create(
+                  { ...submit(row.original), title: `${row.original.title} (copy)` },
+                  `${row.original.title} (copy)`,
+                )
               }
               onDelete={() => remove(row.original.id, row.original.title)}
             />
