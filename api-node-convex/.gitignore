@@ -1,0 +1,16 @@
+node_modules/
+
+# Convex CLI local deployment state. `convex/_generated/` is deliberately NOT
+# ignored — it is committed so the project typechecks without running codegen.
+.convex/
+
+# env
+.env
+.env.local
+.env.*
+!.env.example
+
+# misc
+*.log
+.DS_Store
+coverage/

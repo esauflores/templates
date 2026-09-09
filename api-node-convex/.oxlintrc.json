@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {},
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": ["convex/_generated/**"],
+  "overrides": [
+    {
+      "files": ["convex/**/*.ts"],
+      "jsPlugins": [{ "name": "convex", "specifier": "@convex-dev/eslint-plugin" }],
+      "rules": {
+        "convex/no-old-registered-function-syntax": "error",
+        "convex/require-args-validator": "error",
+        "convex/explicit-table-ids": "error",
+        "convex/no-filter-in-query": "error",
+        "convex/no-collect-in-query": "error",
+        "convex/no-schema-import-cycle": "error",
+        "convex/no-top-of-hour-crons": "error",
+        "convex/import-wrong-runtime": "error"
+      }
+    }
+  ]
+}
