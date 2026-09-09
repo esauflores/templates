@@ -123,11 +123,13 @@ describe("files (Convex storage)", () => {
     // so nothing references these and no query can see them.
     const orphan = await t.run((ctx) => ctx.storage.store(new Blob(["dropped"])));
 
-    // `graceMs: 0` puts the cutoff at now, so both blobs are old enough to be
-    // considered; the cron uses a day so an in-flight upload is never touched.
-    expect(await t.mutation(internal.infrastructure.storage.files.sweepUnclaimedUploads, { graceMs: 0 })).toMatchObject(
-      { deleted: 1 },
-    );
+    // Negative grace puts the cutoff just *after* now, so both blobs count as
+    // old however tight the clock — `graceMs: 0` would tie `_creationTime` to
+    // the cutoff and the strict `<` would skip them. The cron uses a day, so an
+    // in-flight upload is never touched.
+    expect(
+      await t.mutation(internal.infrastructure.storage.files.sweepUnclaimedUploads, { graceMs: -1_000 }),
+    ).toMatchObject({ deleted: 1 });
 
     expect(await t.run((ctx) => ctx.db.system.get("_storage", orphan))).toBeNull();
     expect(await alice.query(api.infrastructure.storage.files.get, { id: file._id })).toMatchObject({
