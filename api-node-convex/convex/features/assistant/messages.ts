@@ -1,35 +1,11 @@
-import { listUIMessages, vPaginationResult } from "@convex-dev/agent";
-import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
-import { components, internal } from "@/_generated/api";
-import { action, internalMutation, query } from "@/_generated/server";
+import { internal } from "@/_generated/api";
+import { action, internalMutation } from "@/_generated/server";
 import { requireUserId } from "@/infrastructure/identity/auth";
 import { limitAi } from "@/infrastructure/lib/limits";
 
 import { assistant, authorizeThread } from "./agent";
-
-/** The fields a REST caller (or a simple chat UI) actually renders. */
-const listedMessage = v.object({
-  id: v.string(),
-  role: v.string(),
-  text: v.string(),
-});
-
-/** The thread's history. Full UIMessage objects stay in the component; this is the projection. */
-export const list = query({
-  args: { threadId: v.string(), paginationOpts: paginationOptsValidator },
-  returns: vPaginationResult(listedMessage),
-  handler: async (ctx, args) => {
-    const ownerId = await requireUserId(ctx);
-    await authorizeThread(ctx, args.threadId, ownerId);
-    const page = await listUIMessages(ctx, components.agent, args);
-    return {
-      ...page,
-      page: page.page.map((message) => ({ id: message.id, role: message.role, text: message.text })),
-    };
-  },
-});
 
 /**
  * Spend one LLM token.

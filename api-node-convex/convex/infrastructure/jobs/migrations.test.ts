@@ -57,3 +57,67 @@ describe("normalizeCustomerEmails migration", () => {
     ).toBe("again@acme.test");
   });
 });
+
+describe("soft-delete backfills", () => {
+  it("marks legacy replicated rows as live", async () => {
+    const t = setup();
+    const ids = await t.run(async (ctx) => ({
+      customer: await ctx.db.insert("customers", {
+        ownerId: "alice",
+        clientId: "customer",
+        updatedAt: 1,
+        name: "Acme",
+        email: "a@acme.test",
+        plan: "pro",
+        status: "active",
+      }),
+      product: await ctx.db.insert("products", {
+        ownerId: "alice",
+        clientId: "product",
+        updatedAt: 1,
+        name: "Widget",
+        sku: "W1",
+        priceCents: 100,
+        active: true,
+      }),
+      project: await ctx.db.insert("projects", {
+        ownerId: "alice",
+        clientId: "project",
+        updatedAt: 1,
+        name: "Launch",
+        status: "active",
+      }),
+      ticket: await ctx.db.insert("tickets", {
+        ownerId: "alice",
+        clientId: "ticket",
+        updatedAt: 1,
+        subject: "Help",
+        body: "Please",
+        priority: "normal",
+        status: "open",
+      }),
+    }));
+
+    expect((await t.withIdentity({ subject: "alice" }).query(api.features.sales.customers.list, {}))[0]?._id).toBe(
+      ids.customer,
+    );
+
+    for (const fn of [
+      internal.infrastructure.jobs.migrations.backfillCustomerDeletes,
+      internal.infrastructure.jobs.migrations.backfillProductDeletes,
+      internal.infrastructure.jobs.migrations.backfillProjectDeletes,
+      internal.infrastructure.jobs.migrations.backfillTicketDeletes,
+    ]) {
+      await t.run(async (ctx) => {
+        await runToCompletion(ctx as never, components.migrations, fn);
+      });
+    }
+
+    await t.run(async (ctx) => {
+      expect((await ctx.db.get("customers", ids.customer))?.deleted).toBe(false);
+      expect((await ctx.db.get("products", ids.product))?.deleted).toBe(false);
+      expect((await ctx.db.get("projects", ids.project))?.deleted).toBe(false);
+      expect((await ctx.db.get("tickets", ids.ticket))?.deleted).toBe(false);
+    });
+  });
+});

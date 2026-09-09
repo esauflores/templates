@@ -1,6 +1,6 @@
 import { Migrations } from "@convex-dev/migrations";
 
-import { components, internal } from "@/_generated/api";
+import { components } from "@/_generated/api";
 import schema from "@/schema";
 
 /**
@@ -27,7 +27,7 @@ export const migrations = new Migrations(components.migrations, { schema });
 /**
  * Generic runner, so a migration can be invoked by name (`M` being this module,
  * `infrastructure/jobs/migrations`):
- *   pnpm dlx convex run $M:run '{fn: "$M:normalizeCustomerEmails"}'
+ *   pnx convex run $M:run '{fn: "$M:normalizeCustomerEmails"}'
  *
  * The name the component records is that path, so moving this file makes an
  * already-completed migration run again under its new name.
@@ -50,9 +50,23 @@ export const normalizeCustomerEmails = migrations.define({
   },
 });
 
-/**
- * The list to run on deploy, in order:
- *   pnpm dlx convex run $M:runAll --prod
- * Already-completed migrations are skipped, so this is safe to run every time.
- */
-export const runAll = migrations.runner([internal.infrastructure.jobs.migrations.normalizeCustomerEmails]);
+/** Backfill the soft-delete marker added to the offline replication protocol. */
+export const backfillCustomerDeletes = migrations.define({
+  table: "customers",
+  migrateOne: (_ctx, customer) => (customer.deleted === undefined ? { deleted: false } : undefined),
+});
+
+export const backfillProductDeletes = migrations.define({
+  table: "products",
+  migrateOne: (_ctx, product) => (product.deleted === undefined ? { deleted: false } : undefined),
+});
+
+export const backfillProjectDeletes = migrations.define({
+  table: "projects",
+  migrateOne: (_ctx, project) => (project.deleted === undefined ? { deleted: false } : undefined),
+});
+
+export const backfillTicketDeletes = migrations.define({
+  table: "tickets",
+  migrateOne: (_ctx, ticket) => (ticket.deleted === undefined ? { deleted: false } : undefined),
+});

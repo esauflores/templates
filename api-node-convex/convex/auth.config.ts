@@ -6,7 +6,7 @@ import type { AuthConfig } from "convex/server";
  *
  * Clerk: activate the Convex integration in the Clerk dashboard, then point this
  * at your Frontend API URL (the token's `iss` claim):
- *   pnpm dlx convex env set CLERK_JWT_ISSUER_DOMAIN https://<your-subdomain>.clerk.accounts.dev
+ *   pnx convex env set CLERK_JWT_ISSUER_DOMAIN https://<your-subdomain>.clerk.accounts.dev
  * `applicationID` must match the token's `aud`, which the integration sets to
  * the literal `convex`.
  */

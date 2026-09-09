@@ -8,13 +8,13 @@ Convex is the database, the runtime, and (via `http.ts`) the HTTP API.
 
 ```sh
 pnpm install
-pnpm dlx convex dev        # logs in, creates a dev deployment, writes _generated/, watches
+pnx convex dev        # logs in, creates a dev deployment, writes _generated/, watches
 
 # set deployment config (not .env — these are read as process.env.NAME in functions)
-pnpm dlx convex env set CLERK_JWT_ISSUER_DOMAIN https://<subdomain>.clerk.accounts.dev
-pnpm dlx convex env set CLERK_WEBHOOK_SECRET    whsec_...        # Clerk dashboard → Webhooks
-pnpm dlx convex env set MISTRAL_API_KEY         <key>            # only for features/assistant
-pnpm dlx convex env set OUTBOUND_WEBHOOK_URL    https://...      # optional; unset = deliveries skipped
+pnx convex env set CLERK_JWT_ISSUER_DOMAIN https://<subdomain>.clerk.accounts.dev
+pnx convex env set CLERK_WEBHOOK_SECRET    whsec_...        # Clerk dashboard → Webhooks
+pnx convex env set MISTRAL_API_KEY         <key>            # only for features/assistant
+pnx convex env set OUTBOUND_WEBHOOK_URL    https://...      # optional; unset = deliveries skipped
 ```
 
 | Command          | Does                                          |
@@ -46,7 +46,7 @@ convex/
 │   ├── identity/                # auth.ts (requireUserId/Writer/Uploader), users mirror, tables
 │   ├── storage/                 # files.ts over Convex `_storage`, tables
 │   ├── jobs/                    # webhooks.ts (workpool + retries), migrations.ts (backfills)
-│   ├── replication/             # offline-sync (RxDB) pull/push for the flat resources + tombstones
+│   ├── replication/             # offline-sync (RxDB) pull/push for the flat resources
 │   └── lib/                     # helpers that register NO Convex functions
 │       ├── db.ts                # requireOwned(ctx, table, id, ownerId) + list limits
 │       ├── errors.ts            # ConvexError codes → HTTP status
@@ -82,7 +82,7 @@ Convex maps folders to API namespaces: `convex/features/sales/customers.ts` is
   Only same-folder siblings stay relative. The mapping is declared in `tsconfig.json`,
   `convex/tsconfig.json`, and `vitest.config.ts` (three tools resolve it independently).
 - `_generated/` is checked in on purpose and lists every module under `convex/` — re-run
-  `pnpm dlx convex dev` / `convex codegen` after adding a file.
+  `pnx convex dev` / `convex codegen` after adding a file.
 
 ## Functions
 
@@ -153,8 +153,8 @@ writes — `save` instead of `create`, and no `update` — because an upload isn
   customer returns an empty page rather than revealing it exists.
 - The four flat resources (`customers`, `products`, `projects`, `tickets`) also carry
   `clientId` + `updatedAt` and expose `pull` / `push` for offline sync — see
-  [Offline replication](#offline-replication-rxdb). `create` accepts an optional client-minted
-  `clientId`; omit it and the server generates one.
+  [Offline replication](#offline-replication-rxdb). Offline clients mint `clientId` for `/push`;
+  plain REST creates get one from the server.
 - `files`: two upload paths, both ending in `save` — `generateUploadUrl` (browser: get a URL,
   POST the bytes, then claim the `storageId`) and the one-shot `POST /files`. `contentType` /
   `size` are read back from `_storage`, never stored; a `by_storageId` index enforces one
@@ -164,7 +164,7 @@ writes — `save` instead of `create`, and no `update` — because an upload isn
   deleted a day later by the cron — see Scheduled work.
 
 **Adding a resource:** add the table (with a `by_ownerId` index) to its feature's `tables.ts`,
-copy `features/sales/customers.ts`, run `pnpm dlx convex dev`, wire it into `http.ts` with
+copy `features/sales/customers.ts`, run `pnx convex dev`, wire it into `http.ts` with
 `mountResource`.
 
 The flat modules are near-identical on purpose — a generic CRUD factory fights Convex's
@@ -194,13 +194,12 @@ Hand-wired routes:
 
 - `GET /orders/stats?since=<ms>` → `{ count, totalCents }`. Registered as an exact path so it
   wins over the `/orders/{id}` prefix.
-- `/threads` — `POST` `{ title? }` → `{ threadId }`, `GET ?limit=&cursor=`,
-  `DELETE /threads/{id}` (204), `POST /threads/{id}/messages` `{ prompt }` → `{ text }`,
-  `GET /threads/{id}/messages`. See Assistant.
+- `/threads` — `POST` `{ title? }` → `{ threadId }`; `POST /threads/{id}/messages`
+  `{ prompt }` → `{ text }`. See Assistant.
 - `/files` — `POST /files?name=` with raw bytes + `Content-Type` → `ctx.storage.store` then
   `files.save` (201); `GET /files?limit=&cursor=`, `GET /files/{id}`, `DELETE /files/{id}`
   behave like any other collection.
-- `GET /x/pull?updatedAt=&clientId=&limit=` and `POST /x/push` on `customers`, `products`,
+- `GET /x/pull?updatedAt=&limit=` and `POST /x/push` on `customers`, `products`,
   `projects`, `tickets` — offline sync, via `mountReplication`. Exact paths, so they win over
   `/x/{id}`. See [Offline replication](#offline-replication-rxdb).
 - `POST /webhooks/clerk` — Svix-signature-verified (not Bearer-authed); keeps `users` in sync.
@@ -213,7 +212,7 @@ Writes past the per-caller budget answer `429` with a `Retry-After` header.
 **no server SDK**. Setup:
 
 1. Enable the **Convex integration** in the Clerk dashboard (issues tokens with `aud: "convex"`).
-2. `pnpm dlx convex env set CLERK_JWT_ISSUER_DOMAIN https://<subdomain>.clerk.accounts.dev`
+2. `pnx convex env set CLERK_JWT_ISSUER_DOMAIN https://<subdomain>.clerk.accounts.dev`
 
 In any function, `await ctx.auth.getUserIdentity()` returns the verified claims (`.subject` is
 the user id) or `null`, and propagates through `ctx.runQuery` / `ctx.runMutation`. Scope by
@@ -241,7 +240,7 @@ with their own tables. Five are installed in `convex.config.ts`:
 | `@convex-dev/migrations`   | `infrastructure/jobs/migrations.ts` | online data backfills                    |
 
 Adding one is three steps: `app.use(...)` in `convex.config.ts` (with a `name` for multiple
-instances), `pnpm dlx convex dev` to regenerate the `components.<name>` bindings (**commit
+instances), `pnx convex dev` to regenerate the `components.<name>` bindings (**commit
 them**), and registration in `test/harness.ts` or every function touching `components.*` fails.
 
 Not installed: `@convex-dev/better-auth` (a Clerk _replacement_, not an addition).
@@ -278,9 +277,8 @@ paid — the template's only `action`, and the shape for any "data changed, go t
 job. The mutation commits first and only _enqueues_ the delivery (inside its transaction, so a
 throw sends nothing); the action does the non-transactional `fetch`.
 
-The workpool adds bounded concurrency (`maxParallelism: 5`), retries with backoff
-(`maxAttempts: 4`), and an `onComplete` that fires even after the last retry — the only place
-a permanent failure is visible. Retries are only safe for idempotent work: this delivery
+The workpool adds bounded concurrency and retries with backoff. Retries are only safe for
+idempotent work: this delivery
 sends an `Idempotency-Key` naming the _state transition_ (`invoice.paid:<id>`). Work that
 can't offer that (sending email, charging a card without a transaction id) must enqueue with
 `retry: false`. That's the event-driven half; the clock-driven half is Scheduled work below.
@@ -295,26 +293,34 @@ run a migration to fix the data, narrow the schema, push again.
 
 ```sh
 M=infrastructure/jobs/migrations
-pnpm dlx convex run $M:normalizeCustomerEmails '{dryRun: true}'   # one batch, then throw
-pnpm dlx convex run $M:normalizeCustomerEmails                    # for real
-pnpm dlx convex run $M:runAll --prod                              # the whole list, in order
-pnpm dlx convex run --component migrations lib:getStatus --watch  # live progress
+pnx convex run $M:normalizeCustomerEmails '{dryRun: true}'   # one batch, then throw
+pnx convex run $M:normalizeCustomerEmails                    # for real
+pnx convex run --component migrations lib:getStatus --watch  # live progress
 ```
 
-`runAll` skips completed migrations, so it's safe on every deploy:
-`pnpm dlx convex deploy && pnpm dlx convex run $M:runAll --prod`. The recorded name is the
-function path, so moving this module makes an already-completed migration run again under its
-new name — harmless for an idempotent backfill, worth knowing for a destructive one.
+The recorded name is the function path, so moving this module makes an already-completed
+migration run again under its new name — harmless for an idempotent backfill, worth knowing for
+a destructive one.
+
+When upgrading to this version's soft-delete replication protocol, deploy the optional
+`deleted` field, then run these four one-time backfills:
+
+```sh
+pnx convex run $M:run '{fn: "$M:backfillCustomerDeletes"}'
+pnx convex run $M:run '{fn: "$M:backfillProductDeletes"}'
+pnx convex run $M:run '{fn: "$M:backfillProjectDeletes"}'
+pnx convex run $M:run '{fn: "$M:backfillTicketDeletes"}'
+```
 
 ### Assistant
 
 `@convex-dev/agent` owns the thread and message tables (nothing added to `schema.ts`).
 `features/assistant/` is the app-side wrapper: auth (threads keyed by the Clerk `sub`), the
-rate-limit reservation, and the HTTP routes. The model is Mistral (`mistral-small-latest`) via
+rate-limit reservation, and two HTTP routes. The model is Mistral (`mistral-small-latest`) via
 the AI SDK, isolated in `model.ts` so tests stub it — the key is read from the **deployment**
-env at request time (`pnpm dlx convex env set MISTRAL_API_KEY <key>`), and the first `ask`
-throws if it's missing. `ask` authorizes, spends an `ai` token, then `generateText`s. For a
-chat UI, swap to `assistant.streamText` and subscribe to `messages.list`.
+env at request time (`pnx convex env set MISTRAL_API_KEY <key>`), and the first `ask`
+throws if it's missing. `ask` authorizes, spends an `ai` token, then `generateText`s. Add
+listing, deletion, or streaming only when the UI needs them.
 
 ## Scheduled work (`crons.ts`)
 
@@ -357,33 +363,25 @@ keeps a local IndexedDB copy of the caller's rows, reads and writes it offline, 
 reconciles on reconnect. Wired for the four flat resources; `customers.pull` / `customers.push`
 are the reference pair, `mountReplication` puts them on HTTP.
 
-**Two extra columns**, `...replicatedFields` from `replication/tables.ts`:
+**Three extra columns**, `...replicatedFields` from `replication/tables.ts`:
 
-- `clientId` — a stable id the client mints _before_ the row reaches the server, so an offline
-  insert has an identity to sync under. It's the RxDB primary key; Convex's `_id` is
-  server-only. `create` takes an optional `clientId`; a plain REST call omits it and the
-  server generates one.
-- `updatedAt` — epoch millis, bumped on every write (`stampCreate` / `stampUpdate`). `pull`
-  orders by it; `push` resolves conflicts by it.
+- `clientId` — a stable id the offline client mints before a `/push`; it is the RxDB primary
+  key while Convex's `_id` stays server-only. Plain REST creates get a server-generated id.
+- `updatedAt` — a server-owned, monotonic version. `pull` uses it as its checkpoint;
+  `push` uses it for optimistic concurrency.
+- `deleted` — a server-side soft-delete flag. The replication boundary maps it to RxDB's
+  `_deleted`, so a client that was offline receives the deletion.
 
-**`pull({ checkpoint, limit })` → `{ documents, checkpoint }`.** Everything changed at or
-after the checkpoint — live rows as `{ ...doc, _deleted: false }`, deletes as
-`{ clientId, updatedAt, _deleted: true }` — ordered by `(updatedAt, clientId)`, capped at
-`limit`. Hand the returned checkpoint back for the next page; at a few hundred rows the first
-call gets everything.
+**`pull({ checkpoint, limit })` → `{ documents, checkpoint }`.** Everything changed after the
+checkpoint, ordered by the unique server version and capped at `limit`. Documents contain only
+the client schema fields — Convex's `_id`, `_creationTime`, and `ownerId` remain server-only.
 
-**`push({ changeRows })` → `[]`.** New `clientId` inserts, known `clientId` patches, `_deleted`
-drops the row. Conflicts are **last-write-wins on `updatedAt`**: `push` never returns a
-conflict row — if the server's copy is newer it keeps it and the client re-pulls it next
-cycle. Enough for single-owner data. Concurrent multi-device edits to the same row would
-instead compare `assumedMasterState`, return the current server state, and merge it in a
-client-side `conflictHandler`.
+**`push(changeRows)` → conflicts.** New `clientId` inserts; a known row changes only when the
+client's `assumedMasterState` has the current server version. A mismatch returns the current
+master document, which RxDB resolves via its client-side `conflictHandler`.
 
-**Deletes are tombstoned.** A hard `DELETE` is invisible to a client that was offline when it
-happened — on reconnect it re-pushes its stale copy and resurrects the row. So `remove` writes
-a row to the `tombstones` table (keyed by `clientId`), and `pull` replays it. Tombstones
-accrue forever; a real deployment prunes ones older than its longest offline window with a
-cron over `by_ownerId_and_table_and_updatedAt`.
+**Deletes are soft.** REST deletes set `deleted: true`; `pull` emits that row with
+`_deleted: true`, so no separate tombstone table or cleanup job is needed.
 
 **`invoices` and `orders` are not replicated.** Both hold foreign keys to rows that might only
 exist on the client (an invoice for an offline-created customer), and `orders` totals are
@@ -406,7 +404,7 @@ Caveats: rule names come from the plugin, not its docs table (`require-args-vali
 `require-argument-validators`). `explicit-table-ids` and `no-collect-in-query` fire
 heuristically without type info (no autofix, false positives possible — silence with
 `// eslint-disable-next-line @convex-dev/<rule>`, or use the type-aware codemod
-`pnpm dlx @convex-dev/codemod explicit-ids`). oxlint's `jsPlugins` is alpha — if it breaks,
+`pnx @convex-dev/codemod explicit-ids`). oxlint's `jsPlugins` is alpha — if it breaks,
 drop the `overrides` block and nothing else depends on it.
 
 ## Tests
@@ -426,7 +424,7 @@ doesn't record `contentType`, so it always reads back `null` in tests.
 
 ## Deploy
 
-`pnpm dlx convex deploy` — Convex hosts the datastore, functions, and HTTP endpoints. Set
-config with `pnpm dlx convex env set NAME value` (read as `process.env.NAME`), not via `.env`.
+`pnx convex deploy` — Convex hosts the datastore, functions, and HTTP endpoints. Set
+config with `pnx convex env set NAME value` (read as `process.env.NAME`), not via `.env`.
 Self-hosting (docker, Postgres/MySQL-backed) is also supported — see
 [the guide](https://docs.convex.dev/self-hosting).

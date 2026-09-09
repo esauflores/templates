@@ -30,7 +30,7 @@ export async function requireOwned<T extends OwnedTable>(
   ownerId: string,
 ): Promise<Doc<T>> {
   const doc = await ctx.db.get(table, id);
-  if (!doc || doc.ownerId !== ownerId) throw notFound(`${table} not found`);
+  if (!doc || doc.ownerId !== ownerId || ("deleted" in doc && doc.deleted)) throw notFound(`${table} not found`);
   return doc;
 }
 

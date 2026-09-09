@@ -23,11 +23,7 @@ import { chatModel } from "./model";
 export const assistant = new Agent(components.agent, {
   name: "sales-assistant",
   languageModel: chatModel,
-  instructions: [
-    "You are a concise assistant embedded in a sales back-office API.",
-    "Answer in plain prose, at most a short paragraph.",
-    "If you are asked about specific records, say that you cannot see them yet.",
-  ].join(" "),
+  instructions: "You are a concise sales assistant. Say when you cannot see the user's records.",
 });
 
 /**

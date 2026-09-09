@@ -65,25 +65,13 @@ http.route({
 // wired by hand.
 
 /**
- * The `{threadId}` from `/threads/{threadId}/<tail>`, else a 404.
- *
- * The id is dynamic, so these routes can only match on `pathPrefix` and must
- * check the remaining segments themselves — otherwise `pathPrefix: "/threads/"`
- * would happily read `messages` as an id.
+ * The `{threadId}` from `/threads/{threadId}/messages`, else a 404.
  */
-function threadIdFromPath(req: Request, ...tail: string[]): string {
+function threadIdFromPath(req: Request): string {
   const [threadId, ...rest] = new URL(req.url).pathname.split("/").filter(Boolean).slice(1);
-  if (!threadId || rest.join("/") !== tail.join("/")) throw notFound("Not found");
+  if (!threadId || rest.join("/") !== "messages") throw notFound("Not found");
   return threadId;
 }
-
-http.route({
-  path: "/threads",
-  method: "GET",
-  handler: authed(async (ctx, req) =>
-    jsonPage(await ctx.runQuery(api.features.assistant.threads.list, { paginationOpts: paginationFrom(req) })),
-  ),
-});
 
 http.route({
   path: "/threads",
@@ -95,34 +83,12 @@ http.route({
 
 http.route({
   pathPrefix: "/threads/",
-  method: "GET",
-  handler: authed(async (ctx, req) =>
-    jsonPage(
-      await ctx.runQuery(api.features.assistant.messages.list, {
-        threadId: threadIdFromPath(req, "messages"),
-        paginationOpts: paginationFrom(req),
-      }),
-    ),
-  ),
-});
-
-http.route({
-  pathPrefix: "/threads/",
   method: "POST",
   handler: authed(async (ctx, req) => {
-    const threadId = threadIdFromPath(req, "messages");
+    const threadId = threadIdFromPath(req);
     const { prompt } = await jsonBody(req);
     if (typeof prompt !== "string") throw invalidArgument("prompt must be a string");
     return json(await ctx.runAction(api.features.assistant.messages.ask, { threadId, prompt }));
-  }),
-});
-
-http.route({
-  pathPrefix: "/threads/",
-  method: "DELETE",
-  handler: authed(async (ctx, req) => {
-    await ctx.runMutation(api.features.assistant.threads.remove, { threadId: threadIdFromPath(req) });
-    return new Response(null, { status: 204 });
   }),
 });
 

@@ -171,8 +171,8 @@ export type ReplicationRefs = { pull: QueryRef; push: MutationRef };
  * `pathPrefix: "{path}/"` the same way `/orders/stats` does — `pull` and `push`
  * are never mistaken for an `{id}`. Call this *after* `mountResource(path)`.
  *
- *   GET  {path}/pull?updatedAt=&clientId=&limit=  → { documents, checkpoint }
- *   POST {path}/push   { changeRows: [...] }      → conflicts ([] here)
+ *   GET  {path}/pull?updatedAt=&limit=  → { documents, checkpoint }
+ *   POST {path}/push   [...]             → conflicts
  */
 export function mountReplication(http: HttpRouter, path: string, refs: ReplicationRefs): void {
   http.route({
@@ -181,9 +181,7 @@ export function mountReplication(http: HttpRouter, path: string, refs: Replicati
     handler: authed(async (ctx, req) => {
       const params = new URL(req.url).searchParams;
       const updatedAt = Number(params.get("updatedAt"));
-      const clientId = params.get("clientId");
-      // A checkpoint needs both halves; anything partial is treated as "from the start".
-      const checkpoint = Number.isFinite(updatedAt) && clientId ? { updatedAt, clientId } : null;
+      const checkpoint = Number.isFinite(updatedAt) ? updatedAt : null;
       const limit = clampLimit(Number(params.get("limit")) || undefined);
       return json(await ctx.runQuery(refs.pull, { checkpoint, limit }));
     }),
@@ -193,9 +191,14 @@ export function mountReplication(http: HttpRouter, path: string, refs: Replicati
     path: `${path}/push`,
     method: "POST",
     handler: authed(async (ctx, req) => {
-      const body = await jsonBody(req);
-      if (!Array.isArray(body.changeRows)) throw invalidArgument("changeRows must be an array");
-      return json(await ctx.runMutation(refs.push, { changeRows: body.changeRows }));
+      let body: unknown;
+      try {
+        body = await req.json();
+      } catch {
+        throw invalidArgument("Request body must be valid JSON");
+      }
+      if (!Array.isArray(body)) throw invalidArgument("Request body must be a changeRows array");
+      return json(await ctx.runMutation(refs.push, { changeRows: body }));
     }),
   });
 }

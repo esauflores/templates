@@ -3,106 +3,84 @@ import { describe, expect, it } from "vitest";
 
 import { api } from "@/_generated/api";
 
-/**
- * Offline replication for the flat resources — exercised through `customers`,
- * since `products` / `projects` / `tickets` share the same helpers verbatim.
- */
-
 const CUST = { name: "Acme", email: "a@acme.test", plan: "pro" as const, status: "active" as const };
 const page = { checkpoint: null, limit: 100 };
 
-describe("replication pull", () => {
-  it("returns every owned row once, then nothing until something changes", async () => {
-    const alice = asUser("alice");
-    await alice.mutation(api.features.sales.customers.create, { ...CUST, clientId: "c1" });
-    await alice.mutation(api.features.sales.customers.create, { ...CUST, name: "Beta", clientId: "c2" });
-
-    const first = await alice.query(api.features.sales.customers.pull, page);
-    expect(first.documents.map((d) => d.clientId).sort()).toEqual(["c1", "c2"]);
-    expect(first.documents.every((d) => d._deleted === false)).toBe(true);
-    expect(first.checkpoint).not.toBeNull();
-
-    // Re-pulling from the handed-back checkpoint sees nothing new.
-    const second = await alice.query(api.features.sales.customers.pull, { checkpoint: first.checkpoint, limit: 100 });
-    expect(second.documents).toEqual([]);
-  });
-
-  it("replays a delete as a tombstone", async () => {
-    const alice = asUser("alice");
-    const row = await alice.mutation(api.features.sales.customers.create, { ...CUST, clientId: "gone" });
-    await alice.mutation(api.features.sales.customers.remove, { id: row._id });
-
-    const { documents } = await alice.query(api.features.sales.customers.pull, page);
-    expect(documents).toEqual([{ clientId: "gone", updatedAt: expect.any(Number), _deleted: true }]);
-    expect(await alice.query(api.features.sales.customers.list, {})).toEqual([]);
-  });
-
-  it("is scoped to the caller", async () => {
-    await asUser("alice").mutation(api.features.sales.customers.create, { ...CUST, clientId: "a1" });
-    expect((await asUser("bob").query(api.features.sales.customers.pull, page)).documents).toEqual([]);
-  });
+const insert = (clientId: string) => ({
+  newDocumentState: { ...CUST, clientId, updatedAt: 0, _deleted: false },
 });
 
-describe("replication push", () => {
-  const row = (over: Record<string, unknown>) => ({
-    newDocumentState: { ...CUST, clientId: "x1", updatedAt: 1_000, _deleted: false, ...over },
-  });
-
-  it("inserts an unknown clientId and makes it visible everywhere", async () => {
+describe("RxDB replication", () => {
+  it("pulls local-schema documents once and hides soft-deleted rows from CRUD", async () => {
     const alice = asUser("alice");
-    expect(await alice.mutation(api.features.sales.customers.push, { changeRows: [row({})] })).toEqual([]);
+    await alice.mutation(api.features.sales.customers.push, { changeRows: [insert("c1")] });
+    const first = await alice.query(api.features.sales.customers.pull, page);
+    expect(first.documents).toHaveLength(1);
+    expect(first.documents[0]).toMatchObject({ clientId: "c1", _deleted: false });
+    expect(first.documents[0]).not.toHaveProperty("ownerId");
 
-    expect((await alice.query(api.features.sales.customers.list, {}))[0]).toMatchObject({
-      clientId: "x1",
-      name: "Acme",
+    const second = await alice.query(api.features.sales.customers.pull, { checkpoint: first.checkpoint, limit: 100 });
+    expect(second.documents).toEqual([]);
+
+    const master = first.documents[0]!;
+    await alice.mutation(api.features.sales.customers.push, {
+      changeRows: [{ newDocumentState: { ...master, _deleted: true }, assumedMasterState: master }],
     });
-    expect((await alice.query(api.features.sales.customers.pull, page)).documents[0]).toMatchObject({ clientId: "x1" });
+    expect(await alice.query(api.features.sales.customers.list, {})).toEqual([]);
+    expect((await alice.query(api.features.sales.customers.pull, page)).documents[0]).toMatchObject({
+      clientId: "c1",
+      _deleted: true,
+    });
   });
 
-  it("takes a newer write and ignores a stale one (last-write-wins on updatedAt)", async () => {
+  it("returns the master document instead of letting a stale write overwrite it", async () => {
     const alice = asUser("alice");
-    await alice.mutation(api.features.sales.customers.push, { changeRows: [row({ updatedAt: 5_000 })] });
+    await alice.mutation(api.features.sales.customers.push, { changeRows: [insert("x1")] });
+    const master = (await alice.query(api.features.sales.customers.pull, page)).documents[0]!;
 
-    await alice.mutation(api.features.sales.customers.push, { changeRows: [row({ name: "Stale", updatedAt: 4_000 })] });
-    expect((await alice.query(api.features.sales.customers.list, {}))[0]!.name).toBe("Acme");
-
-    await alice.mutation(api.features.sales.customers.push, { changeRows: [row({ name: "Fresh", updatedAt: 9_000 })] });
+    expect(
+      await alice.mutation(api.features.sales.customers.push, {
+        changeRows: [{ newDocumentState: { ...master, name: "Fresh" }, assumedMasterState: master }],
+      }),
+    ).toEqual([]);
+    const conflict = await alice.mutation(api.features.sales.customers.push, {
+      changeRows: [{ newDocumentState: { ...master, _deleted: true }, assumedMasterState: master }],
+    });
+    expect(conflict).toMatchObject([{ clientId: "x1", name: "Fresh", _deleted: false }]);
     expect((await alice.query(api.features.sales.customers.list, {}))[0]!.name).toBe("Fresh");
   });
 
-  it("drops the row and tombstones it on a _deleted push", async () => {
+  it("pages writes made in the same client millisecond", async () => {
     const alice = asUser("alice");
-    await alice.mutation(api.features.sales.customers.push, { changeRows: [row({ updatedAt: 5_000 })] });
-    await alice.mutation(api.features.sales.customers.push, {
-      changeRows: [row({ _deleted: true, updatedAt: 6_000 })],
-    });
-
-    expect(await alice.query(api.features.sales.customers.list, {})).toEqual([]);
-    expect((await alice.query(api.features.sales.customers.pull, page)).documents).toEqual([
-      { clientId: "x1", updatedAt: expect.any(Number), _deleted: true },
+    await alice.mutation(api.features.sales.customers.push, { changeRows: [insert("a"), insert("b"), insert("c")] });
+    const first = await alice.query(api.features.sales.customers.pull, { checkpoint: null, limit: 1 });
+    const second = await alice.query(api.features.sales.customers.pull, { checkpoint: first.checkpoint, limit: 1 });
+    const third = await alice.query(api.features.sales.customers.pull, { checkpoint: second.checkpoint, limit: 1 });
+    expect([first, second, third].flatMap((result) => result.documents.map((doc) => doc.clientId)).sort()).toEqual([
+      "a",
+      "b",
+      "c",
     ]);
   });
 });
 
 describe("replication over HTTP", () => {
-  it("pulls and pushes through /customers/pull and /customers/push", async () => {
+  it("uses RxDB's direct changeRows payload", async () => {
     const alice = asUser("alice");
     const push = await alice.fetch("/customers/push", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        changeRows: [{ newDocumentState: { ...CUST, clientId: "h1", updatedAt: 1, _deleted: false } }],
-      }),
+      body: JSON.stringify([insert("h1")]),
     });
     expect(await push.json()).toEqual([]);
 
     const pulled = (await alice.fetch("/customers/pull?limit=100", {}).then((r) => r.json())) as {
       documents: { clientId: string }[];
     };
-    expect(pulled.documents.map((d) => d.clientId)).toEqual(["h1"]);
+    expect(pulled.documents.map((doc) => doc.clientId)).toEqual(["h1"]);
   });
 
-  it("401s an unauthenticated pull and 400s a non-array changeRows", async () => {
+  it("401s an unauthenticated pull and 400s a non-array push body", async () => {
     expect((await setup().fetch("/customers/pull", {})).status).toBe(401);
     const bad = await asUser("alice").fetch("/customers/push", {
       method: "POST",

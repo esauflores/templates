@@ -11,7 +11,7 @@ import { mistral } from "@ai-sdk/mistral";
  * The AI SDK reads `MISTRAL_API_KEY` from the environment at request time, and
  * on Convex that means the **deployment's** environment, not a `.env` file:
  *
- *   pnpm dlx convex env set MISTRAL_API_KEY <your key>
+ *   pnx convex env set MISTRAL_API_KEY <your key>
  *
  * Nothing throws at import time if it's missing; the first `generateText` does.
  */

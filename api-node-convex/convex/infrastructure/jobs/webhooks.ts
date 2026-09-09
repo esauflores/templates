@@ -2,7 +2,6 @@ import { Workpool } from "@convex-dev/workpool";
 import { v } from "convex/values";
 
 import { components, internal } from "@/_generated/api";
-import type { DataModel } from "@/_generated/dataModel";
 import { type MutationCtx, internalAction } from "@/_generated/server";
 
 /**
@@ -64,23 +63,6 @@ export const deliver = internalAction({
 });
 
 /**
- * Runs once the work is finished, whichever way it went — including after the
- * final retry is exhausted, which is the only place a permanent failure becomes
- * visible. It's a separate transaction from `deliver`, so a real app would write
- * an audit row here rather than only logging.
- */
-const deliveryContext = v.object({ event: v.string(), idempotencyKey: v.string() });
-
-export const deliveryFinished = pool.defineOnComplete<DataModel, typeof deliveryContext>({
-  context: deliveryContext,
-  handler: async (_ctx, { context, result }) => {
-    if (result.kind === "failed") {
-      console.error(`Webhook ${context.event} (${context.idempotencyKey}) gave up:`, result.error);
-    }
-  },
-});
-
-/**
  * Queue a delivery from inside a mutation; commits with the surrounding
  * transaction, so a mutation that later throws sends nothing.
  *
@@ -101,9 +83,6 @@ export async function enqueueDelivery(
       // Self-describing envelope, so a receiver can route on the body alone.
       body: JSON.stringify({ event: args.event, payload: args.payload }),
     },
-    {
-      onComplete: internal.infrastructure.jobs.webhooks.deliveryFinished,
-      context: { event: args.event, idempotencyKey: args.idempotencyKey },
-    },
+    {},
   );
 }

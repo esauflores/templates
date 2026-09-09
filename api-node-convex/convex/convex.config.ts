@@ -11,7 +11,7 @@ import { defineApp } from "convex/server";
  * A component is a sandboxed mini-backend with its own tables: it can't read
  * this app's data, and this app can't read its tables except through the
  * functions it exports as `components.<name>`. Those bindings are generated, so
- * `pnpm dlx convex dev` (or `pnpm dlx convex codegen`) must run after editing this file.
+ * `pnx convex dev` (or `pnx convex codegen`) must run after editing this file.
  *
  * Pools are named because that's how you get more than one: each `app.use` of
  * `workpool` is an independent queue with its own parallelism budget, so a flood
