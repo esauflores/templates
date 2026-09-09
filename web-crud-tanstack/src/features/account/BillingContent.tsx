@@ -1,7 +1,7 @@
 import { DataTable } from "#/components/crud/data-table";
-import { StatusBadge } from "#/components/crud/status-badge";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "#/components/ui/card";
+import { StatusBadge } from "#/components/ui/status-badge";
 import { TableCell, TableHead, TableRow } from "#/components/ui/table";
 import { BILLING, METERS } from "#/features/account/data/billing";
 import { INVOICES } from "#/features/sales/data/invoices";

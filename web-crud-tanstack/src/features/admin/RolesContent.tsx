@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "#/components/ui/button";
@@ -13,9 +13,9 @@ const norm = (g: Grants) => ROLES.map((r) => `${r}:${[...g[r]].sort().join(",")}
 const PERMISSION_GROUPS = [...new Set(PERMISSIONS.map((p) => p.group))];
 
 export const RolesContent = () => {
-  const saved = useRef<Grants>(structuredClone(DEFAULT_GRANTS));
+  const [saved, setSaved] = useState<Grants>(() => structuredClone(DEFAULT_GRANTS));
   const [grants, setGrants] = useState<Grants>(() => structuredClone(DEFAULT_GRANTS));
-  const dirty = norm(grants) !== norm(saved.current);
+  const dirty = norm(grants) !== norm(saved);
 
   const toggle = (role: string, id: string) =>
     setGrants((prev) => {
@@ -24,8 +24,7 @@ export const RolesContent = () => {
     });
 
   const save = () => {
-    saved.current = structuredClone(grants);
-    setGrants(structuredClone(grants));
+    setSaved(structuredClone(grants));
     toast.success("Permissions saved");
   };
 
@@ -36,7 +35,7 @@ export const RolesContent = () => {
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => setGrants(structuredClone(saved.current))}
+          onClick={() => setGrants(structuredClone(saved))}
           disabled={!dirty}
         >
           Reset

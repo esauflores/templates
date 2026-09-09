@@ -1,61 +1,99 @@
-import { cva, type VariantProps } from "class-variance-authority";
+import * as stylex from "@stylexjs/stylex";
 import { cn } from "cn";
 import { Slot } from "radix-ui";
 import * as React from "react";
 
-const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
-        outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
+type Variant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+type Size = "default" | "xs" | "sm" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg";
+
+const styles = stylex.create({
+  base: {
+    alignItems: "center",
+    borderRadius: 6,
+    borderStyle: "solid",
+    borderWidth: 0,
+    cursor: "pointer",
+    display: "inline-flex",
+    fontSize: 14,
+    fontWeight: 500,
+    gap: 8,
+    justifyContent: "center",
+    lineHeight: 1,
+    outline: "none",
+    padding: 0,
+    transitionDuration: "150ms",
+    transitionProperty: "background-color, border-color, color, box-shadow",
+    whiteSpace: "nowrap",
   },
-);
+  disabled: { cursor: "not-allowed", opacity: 0.5, pointerEvents: "none" },
+  default: { backgroundColor: "var(--primary)", color: "var(--primary-foreground)" },
+  destructive: { backgroundColor: "var(--destructive)", color: "white" },
+  outline: {
+    backgroundColor: "var(--background)",
+    borderColor: "var(--border)",
+    borderWidth: 1,
+    color: "var(--foreground)",
+  },
+  secondary: { backgroundColor: "var(--secondary)", color: "var(--secondary-foreground)" },
+  ghost: { backgroundColor: "transparent", color: "var(--foreground)" },
+  link: {
+    backgroundColor: "transparent",
+    color: "var(--primary)",
+    textDecorationLine: "underline",
+    textUnderlineOffset: 4,
+  },
+  defaultSize: { height: 36, paddingInline: 16 },
+  xs: { fontSize: 12, gap: 4, height: 24, paddingInline: 8 },
+  sm: { gap: 6, height: 32, paddingInline: 12 },
+  lg: { height: 40, paddingInline: 24 },
+  icon: { height: 36, paddingInline: 0, width: 36 },
+  iconXs: { height: 24, paddingInline: 0, width: 24 },
+  iconSm: { height: 32, paddingInline: 0, width: 32 },
+  iconLg: { height: 40, paddingInline: 0, width: 40 },
+});
+
+const variants = {
+  default: styles.default,
+  destructive: styles.destructive,
+  outline: styles.outline,
+  secondary: styles.secondary,
+  ghost: styles.ghost,
+  link: styles.link,
+};
+
+const sizes = {
+  default: styles.defaultSize,
+  xs: styles.xs,
+  sm: styles.sm,
+  lg: styles.lg,
+  icon: styles.icon,
+  "icon-xs": styles.iconXs,
+  "icon-sm": styles.iconSm,
+  "icon-lg": styles.iconLg,
+};
 
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  disabled,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
+}: React.ComponentProps<"button"> & { asChild?: boolean; size?: Size; variant?: Variant }) {
   const Comp = asChild ? Slot.Root : "button";
+  const style = stylex.props(styles.base, variants[variant], sizes[size], disabled && styles.disabled);
 
   return (
     <Comp
+      {...props}
+      {...style}
+      className={cn(style.className, className)}
+      data-size={size}
       data-slot="button"
       data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
+      disabled={disabled}
     />
   );
 }
 
-export { Button, buttonVariants };
+export { Button };

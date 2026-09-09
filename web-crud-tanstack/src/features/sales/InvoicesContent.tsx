@@ -1,18 +1,18 @@
 import { useMemo, useState } from "react";
 import { z } from "zod";
 
+import { StatRow } from "#/components/analytics/stats";
 import { bulkRemove, type Column, DataGrid } from "#/components/crud/data-grid";
 import { EmptyState } from "#/components/crud/empty-state";
 import { Field, SelectField } from "#/components/crud/field";
 import { FormFooter } from "#/components/crud/form-footer";
 import { CrudDialog } from "#/components/crud/page";
 import { RowActions } from "#/components/crud/row-actions";
-import { StatRow } from "#/components/crud/stats";
-import { StatusBadge } from "#/components/crud/status-badge";
 import { useCrud } from "#/components/crud/use-crud";
 import { useZodForm } from "#/components/crud/use-zod-form";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
+import { StatusBadge } from "#/components/ui/status-badge";
 import { INVOICE_STATUSES, INVOICES, type Invoice, type InvoiceStatus } from "#/features/sales/data/invoices";
 import { currency, daysAgo, fmtDate } from "#/lib/format";
 
@@ -156,13 +156,14 @@ const InvoiceForm = ({
   submitLabel: string;
   onSubmit: (draft: Draft) => void;
 }) => {
+  const [number] = useState(() => initial?.number ?? `INV-${2500 + Math.floor(Math.random() * 499)}`);
   const {
     register,
     control,
     handleSubmit,
     formState: { errors },
   } = useZodForm(schema, {
-    number: initial?.number ?? `INV-${2500 + Math.floor(Math.random() * 499)}`,
+    number,
     customer: initial?.customer ?? "",
     amount: initial?.amount ?? 249,
     status: initial?.status ?? "open",

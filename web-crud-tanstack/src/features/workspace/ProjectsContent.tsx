@@ -1,18 +1,18 @@
 import { useMemo, useState } from "react";
 import { z } from "zod";
 
+import { StatRow } from "#/components/analytics/stats";
 import { bulkRemove, type Column, DataGrid } from "#/components/crud/data-grid";
 import { EmptyState } from "#/components/crud/empty-state";
 import { Field, SelectField } from "#/components/crud/field";
 import { FormFooter } from "#/components/crud/form-footer";
 import { CrudDialog } from "#/components/crud/page";
 import { RowActions } from "#/components/crud/row-actions";
-import { StatRow } from "#/components/crud/stats";
-import { StatusBadge } from "#/components/crud/status-badge";
 import { useCrud } from "#/components/crud/use-crud";
 import { useZodForm } from "#/components/crud/use-zod-form";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
+import { StatusBadge } from "#/components/ui/status-badge";
 import { PROJECT_STATUSES, PROJECTS, type Project, type ProjectStatus } from "#/features/workspace/data/projects";
 import { crudPersist } from "#/lib/api";
 import { daysAgo, fmtDate } from "#/lib/format";
@@ -32,6 +32,7 @@ const schema = z.object({
   status: z.enum(PROJECT_STATUSES as [ProjectStatus, ...ProjectStatus[]]),
 });
 type Draft = z.infer<typeof schema>;
+const submit = (d: Draft): Omit<Project, "id"> => ({ ...d, updatedAt: daysAgo(0) });
 
 export const ProjectsContent = () => {
   const { items, create, update, remove, removeMany } = useCrud<Project>(PROJECTS, "project", { persist });
@@ -39,8 +40,6 @@ export const ProjectsContent = () => {
   const [editing, setEditing] = useState<Project | null>(null);
 
   const count = (s: ProjectStatus) => items.filter((p) => p.status === s).length;
-  const submit = (d: Draft): Omit<Project, "id"> => ({ ...d, updatedAt: daysAgo(0) });
-
   const columns = useMemo<Column<Project>[]>(
     () => [
       {

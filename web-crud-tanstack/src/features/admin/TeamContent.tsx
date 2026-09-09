@@ -1,18 +1,18 @@
 import { useMemo, useState } from "react";
 import { z } from "zod";
 
+import { StatRow } from "#/components/analytics/stats";
 import { bulkRemove, type Column, DataGrid } from "#/components/crud/data-grid";
 import { EmptyState } from "#/components/crud/empty-state";
 import { Field, SelectField } from "#/components/crud/field";
 import { FormFooter } from "#/components/crud/form-footer";
 import { CrudDialog } from "#/components/crud/page";
 import { RowActions } from "#/components/crud/row-actions";
-import { StatRow } from "#/components/crud/stats";
-import { StatusBadge } from "#/components/crud/status-badge";
 import { useCrud } from "#/components/crud/use-crud";
 import { useZodForm } from "#/components/crud/use-zod-form";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
+import { StatusBadge } from "#/components/ui/status-badge";
 import { type MemberStatus, type Role, ROLES, TEAM, type TeamMember } from "#/features/admin/data/team";
 
 const ROLE_TONE: Record<Role, "green" | "blue" | "gray"> = { owner: "green", admin: "blue", member: "gray" };

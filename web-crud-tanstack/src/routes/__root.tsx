@@ -3,8 +3,8 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { MotionConfig } from "motion/react";
 import { lazy, Suspense } from "react";
 
-import { NotFound } from "#/components/NotFound";
-import { RouteError } from "#/components/RouteError";
+import { NotFound } from "#/components/boundaries/NotFound";
+import { RouteError } from "#/components/boundaries/RouteError";
 import { Toaster } from "#/components/ui/sonner";
 import { getQueryClient } from "#/lib/query";
 
@@ -23,16 +23,17 @@ export const Route = createRootRoute({
       { title: "Web CRUD" },
       {
         name: "description",
-        content: "Admin dashboard starter — sidebar shell, CRUD suite, charts. TanStack Start + Tailwind.",
+        content: "Admin dashboard starter — sidebar shell and CRUD suite. TanStack Start + Tailwind.",
       },
       { property: "og:type", content: "website" },
       { property: "og:title", content: "Web CRUD" },
-      { property: "og:description", content: "Admin dashboard starter — sidebar shell, CRUD suite, charts." },
+      { property: "og:description", content: "Admin dashboard starter — sidebar shell and CRUD suite." },
       { name: "twitter:card", content: "summary" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
+      ...(import.meta.env.DEV ? [{ rel: "stylesheet", href: "/virtual:stylex.css" }] : []),
     ],
   }),
   component: RootComponent,

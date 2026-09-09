@@ -1,3 +1,5 @@
+import * as stylex from "@stylexjs/stylex";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,10 +13,15 @@ import {
 } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 
+const styles = stylex.create({
+  destructive: { color: "var(--destructive)" },
+  actions: { display: "flex", gap: 4, justifyContent: "flex-end", whiteSpace: "nowrap" },
+});
+
 export const DeleteButton = ({ label, onConfirm }: { label: string; onConfirm: () => void }) => (
   <AlertDialog>
     <AlertDialogTrigger asChild>
-      <Button type="button" variant="ghost" size="xs" className="text-destructive hover:text-destructive">
+      <Button type="button" variant="ghost" size="xs" {...stylex.props(styles.destructive)}>
         Delete
       </Button>
     </AlertDialogTrigger>
@@ -44,7 +51,7 @@ export const RowActions = ({
   onDuplicate?: () => void;
   deleteLabel: string;
 }) => (
-  <div className="space-x-1 text-right whitespace-nowrap">
+  <div {...stylex.props(styles.actions)}>
     <Button type="button" variant="ghost" size="xs" onClick={onEdit}>
       Edit
     </Button>

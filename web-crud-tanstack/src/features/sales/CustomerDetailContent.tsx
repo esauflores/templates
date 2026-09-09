@@ -1,13 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 
+import { StatRow } from "#/components/analytics/stats";
 import { DataTable } from "#/components/crud/data-table";
-import { StatRow } from "#/components/crud/stats";
-import { StatusBadge } from "#/components/crud/status-badge";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
+import { StatusBadge } from "#/components/ui/status-badge";
 import { TableCell, TableHead, TableRow } from "#/components/ui/table";
-import { UserAvatar } from "#/components/user-avatar";
+import { UserAvatar } from "#/components/ui/user-avatar";
 import { CUSTOMERS } from "#/features/sales/data/customers";
 import { INVOICES } from "#/features/sales/data/invoices";
 import { ORDERS } from "#/features/sales/data/orders";

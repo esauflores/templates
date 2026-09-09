@@ -1,19 +1,14 @@
-import { Label as LabelPrimitive } from "radix-ui";
+import * as stylex from "@stylexjs/stylex";
+import { cn } from "cn";
 import * as React from "react";
 
-import { cn } from "@/lib/utils";
+const styles = stylex.create({
+  label: { alignItems: "center", display: "flex", fontSize: 14, fontWeight: 500, gap: 8, lineHeight: 1 },
+});
 
-function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
-  return (
-    <LabelPrimitive.Root
-      data-slot="label"
-      className={cn(
-        "flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    />
-  );
+function Label({ className, ...props }: React.ComponentProps<"label">) {
+  const style = stylex.props(styles.label);
+  return <label {...props} {...style} className={cn(style.className, className)} data-slot="label" />;
 }
 
 export { Label };

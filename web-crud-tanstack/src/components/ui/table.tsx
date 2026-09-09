@@ -1,76 +1,70 @@
+import * as stylex from "@stylexjs/stylex";
+import { cn } from "cn";
 import * as React from "react";
 
-import { cn } from "@/lib/utils";
+const styles = stylex.create({
+  container: { overflowX: "auto", position: "relative", width: "100%" },
+  table: { borderCollapse: "collapse", fontSize: 14, width: "100%" },
+  footer: {
+    backgroundColor: "color-mix(in oklch, var(--muted) 50%, transparent)",
+    borderTopColor: "var(--border)",
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+    fontWeight: 500,
+  },
+  row: {
+    borderBottomColor: "var(--border)",
+    borderBottomStyle: "solid",
+    borderBottomWidth: 1,
+    transitionDuration: "150ms",
+    transitionProperty: "background-color",
+  },
+  head: {
+    fontWeight: 500,
+    height: 40,
+    paddingInline: 8,
+    textAlign: "left",
+    verticalAlign: "middle",
+    whiteSpace: "nowrap",
+  },
+  cell: { padding: 8, verticalAlign: "middle", whiteSpace: "nowrap" },
+  caption: { color: "var(--muted-foreground)", fontSize: 14, marginTop: 16 },
+});
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
+  const style = stylex.props(styles.table);
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
-      <table data-slot="table" className={cn("w-full caption-bottom text-sm", className)} {...props} />
+    <div {...stylex.props(styles.container)} data-slot="table-container">
+      <table {...props} {...style} className={cn(style.className, className)} data-slot="table" />
     </div>
   );
 }
 
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-  return <thead data-slot="table-header" className={cn("[&_tr]:border-b", className)} {...props} />;
+  return <thead {...props} className={className} data-slot="table-header" />;
 }
-
 function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
-  return <tbody data-slot="table-body" className={cn("[&_tr:last-child]:border-0", className)} {...props} />;
+  return <tbody {...props} className={className} data-slot="table-body" />;
 }
-
 function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
-  return (
-    <tfoot
-      data-slot="table-footer"
-      className={cn("border-t bg-muted/50 font-medium [&>tr]:last:border-b-0", className)}
-      {...props}
-    />
-  );
+  const style = stylex.props(styles.footer);
+  return <tfoot {...props} {...style} className={cn(style.className, className)} data-slot="table-footer" />;
 }
-
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
-  return (
-    <tr
-      data-slot="table-row"
-      className={cn(
-        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
-        className,
-      )}
-      {...props}
-    />
-  );
+  const style = stylex.props(styles.row);
+  return <tr {...props} {...style} className={cn(style.className, className)} data-slot="table-row" />;
 }
-
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
-  return (
-    <th
-      data-slot="table-head"
-      className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
-        className,
-      )}
-      {...props}
-    />
-  );
+  const style = stylex.props(styles.head);
+  return <th {...props} {...style} className={cn(style.className, className)} data-slot="table-head" />;
 }
-
 function TableCell({ className, ...props }: React.ComponentProps<"td">) {
-  return (
-    <td
-      data-slot="table-cell"
-      className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
-        className,
-      )}
-      {...props}
-    />
-  );
+  const style = stylex.props(styles.cell);
+  return <td {...props} {...style} className={cn(style.className, className)} data-slot="table-cell" />;
 }
-
 function TableCaption({ className, ...props }: React.ComponentProps<"caption">) {
-  return (
-    <caption data-slot="table-caption" className={cn("mt-4 text-sm text-muted-foreground", className)} {...props} />
-  );
+  const style = stylex.props(styles.caption);
+  return <caption {...props} {...style} className={cn(style.className, className)} data-slot="table-caption" />;
 }
 
 export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };

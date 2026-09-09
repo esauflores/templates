@@ -1,56 +1,61 @@
+import * as stylex from "@stylexjs/stylex";
+import { cn } from "cn";
 import * as React from "react";
 
-import { cn } from "@/lib/utils";
+const styles = stylex.create({
+  card: {
+    backgroundColor: "var(--card)",
+    borderColor: "var(--border)",
+    borderRadius: 12,
+    borderStyle: "solid",
+    borderWidth: 1,
+    color: "var(--card-foreground)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 24,
+    paddingBlock: 24,
+  },
+  header: { display: "grid", gap: 8, paddingInline: 24 },
+  title: { fontWeight: 600, lineHeight: 1 },
+  description: { color: "var(--muted-foreground)", fontSize: 14 },
+  action: { alignSelf: "start", gridColumnStart: 2, gridRow: "span 2 / span 2", gridRowStart: 1, justifySelf: "end" },
+  content: { paddingInline: 24 },
+  footer: { alignItems: "center", display: "flex", paddingInline: 24 },
+});
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card"
-      className={cn("flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm", className)}
-      {...props}
-    />
-  );
+  const style = stylex.props(styles.card);
+  return <div {...props} {...style} className={cn(style.className, className)} data-slot="card" />;
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-header"
-      className={cn(
-        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
-        className,
-      )}
-      {...props}
-    />
-  );
+  const style = stylex.props(styles.header);
+  return <div {...props} {...style} className={cn(style.className, className)} data-slot="card-header" />;
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="card-title" className={cn("leading-none font-semibold", className)} {...props} />;
+  const style = stylex.props(styles.title);
+  return <div {...props} {...style} className={cn(style.className, className)} data-slot="card-title" />;
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="card-description" className={cn("text-sm text-muted-foreground", className)} {...props} />;
+  const style = stylex.props(styles.description);
+  return <div {...props} {...style} className={cn(style.className, className)} data-slot="card-description" />;
 }
 
 function CardAction({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-action"
-      className={cn("col-start-2 row-span-2 row-start-1 self-start justify-self-end", className)}
-      {...props}
-    />
-  );
+  const style = stylex.props(styles.action);
+  return <div {...props} {...style} className={cn(style.className, className)} data-slot="card-action" />;
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="card-content" className={cn("px-6", className)} {...props} />;
+  const style = stylex.props(styles.content);
+  return <div {...props} {...style} className={cn(style.className, className)} data-slot="card-content" />;
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div data-slot="card-footer" className={cn("flex items-center px-6 [.border-t]:pt-6", className)} {...props} />
-  );
+  const style = stylex.props(styles.footer);
+  return <div {...props} {...style} className={cn(style.className, className)} data-slot="card-footer" />;
 }
 
 export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };

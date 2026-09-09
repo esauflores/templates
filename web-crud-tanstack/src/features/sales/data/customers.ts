@@ -7,7 +7,7 @@ export type Customer = {
   email: string;
   plan: Plan;
   mrr: number;
-  /** El Salvador department — matches a `name` in `sv-departments.ts` (used by the Reports map). */
+  /** El Salvador department — one of the customer form options. */
   department: string;
   createdAt: string;
 };

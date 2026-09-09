@@ -22,7 +22,6 @@ import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
 import { Route as AppChangelogRouteImport } from './routes/_app/changelog'
 import { Route as AppCustomersRouteImport } from './routes/_app/customers'
 import { Route as AppFilesRouteImport } from './routes/_app/files'
-import { Route as AppGettingStartedRouteImport } from './routes/_app/getting-started'
 import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
 import { Route as AppInvoicesRouteImport } from './routes/_app/invoices'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
@@ -100,11 +99,6 @@ const AppCustomersRoute = AppCustomersRouteImport.update({
 const AppFilesRoute = AppFilesRouteImport.update({
   id: '/files',
   path: '/files',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppGettingStartedRoute = AppGettingStartedRouteImport.update({
-  id: '/getting-started',
-  path: '/getting-started',
   getParentRoute: () => AppRoute,
 } as any)
 const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
@@ -191,7 +185,6 @@ export interface FileRoutesByFullPath {
   '/changelog': typeof AppChangelogRoute
   '/customers': typeof AppCustomersRoute
   '/files': typeof AppFilesRoute
-  '/getting-started': typeof AppGettingStartedRoute
   '/integrations': typeof AppIntegrationsRoute
   '/invoices': typeof AppInvoicesRoute
   '/notifications': typeof AppNotificationsRoute
@@ -219,7 +212,6 @@ export interface FileRoutesByTo {
   '/changelog': typeof AppChangelogRoute
   '/customers': typeof AppCustomersRoute
   '/files': typeof AppFilesRoute
-  '/getting-started': typeof AppGettingStartedRoute
   '/integrations': typeof AppIntegrationsRoute
   '/invoices': typeof AppInvoicesRoute
   '/notifications': typeof AppNotificationsRoute
@@ -250,7 +242,6 @@ export interface FileRoutesById {
   '/_app/changelog': typeof AppChangelogRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/files': typeof AppFilesRoute
-  '/_app/getting-started': typeof AppGettingStartedRoute
   '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/invoices': typeof AppInvoicesRoute
   '/_app/notifications': typeof AppNotificationsRoute
@@ -282,7 +273,6 @@ export interface FileRouteTypes {
     | '/changelog'
     | '/customers'
     | '/files'
-    | '/getting-started'
     | '/integrations'
     | '/invoices'
     | '/notifications'
@@ -310,7 +300,6 @@ export interface FileRouteTypes {
     | '/changelog'
     | '/customers'
     | '/files'
-    | '/getting-started'
     | '/integrations'
     | '/invoices'
     | '/notifications'
@@ -340,7 +329,6 @@ export interface FileRouteTypes {
     | '/_app/changelog'
     | '/_app/customers'
     | '/_app/files'
-    | '/_app/getting-started'
     | '/_app/integrations'
     | '/_app/invoices'
     | '/_app/notifications'
@@ -456,13 +444,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFilesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/getting-started': {
-      id: '/_app/getting-started'
-      path: '/getting-started'
-      fullPath: '/getting-started'
-      preLoaderRoute: typeof AppGettingStartedRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/integrations': {
       id: '/_app/integrations'
       path: '/integrations'
@@ -575,7 +556,6 @@ interface AppRouteChildren {
   AppChangelogRoute: typeof AppChangelogRoute
   AppCustomersRoute: typeof AppCustomersRoute
   AppFilesRoute: typeof AppFilesRoute
-  AppGettingStartedRoute: typeof AppGettingStartedRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppInvoicesRoute: typeof AppInvoicesRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
@@ -604,7 +584,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppChangelogRoute: AppChangelogRoute,
   AppCustomersRoute: AppCustomersRoute,
   AppFilesRoute: AppFilesRoute,
-  AppGettingStartedRoute: AppGettingStartedRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
   AppInvoicesRoute: AppInvoicesRoute,
   AppNotificationsRoute: AppNotificationsRoute,

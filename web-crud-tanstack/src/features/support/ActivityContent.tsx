@@ -1,7 +1,7 @@
 import { MessageSquare, Pencil, Plus, LogIn, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { StatRow } from "#/components/crud/stats";
+import { StatRow } from "#/components/analytics/stats";
 import { Button } from "#/components/ui/button";
 import { ACTIVITY, ACTIVITY_KINDS, type ActivityKind } from "#/features/support/data/activity";
 import { fmtDate } from "#/lib/format";

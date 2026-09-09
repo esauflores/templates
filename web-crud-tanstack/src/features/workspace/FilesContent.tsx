@@ -1,11 +1,11 @@
 import { ChevronRight, File, FileCode, FileText, Folder, Image, Sheet } from "lucide-react";
 import { Fragment, useState } from "react";
 
+import { StatRow } from "#/components/analytics/stats";
 import { DataTable } from "#/components/crud/data-table";
 import { FormFooter } from "#/components/crud/form-footer";
 import { CrudDialog } from "#/components/crud/page";
 import { RowActions } from "#/components/crud/row-actions";
-import { StatRow } from "#/components/crud/stats";
 import { useCrud } from "#/components/crud/use-crud";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";

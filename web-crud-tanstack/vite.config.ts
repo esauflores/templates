@@ -1,3 +1,4 @@
+import stylex from "@stylexjs/unplugin";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
@@ -6,13 +7,8 @@ import { defineConfig } from "vite";
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
-  // @visx/* (alpha) and some d3 ESM packages, pulled in by the Bklit charts,
-  // ship extensionless internal imports that Node's dev-SSR resolver rejects.
-  // Bundle them for SSR instead of externalizing — the prod build already does.
-  ssr: { noExternal: [/^@visx\//, /^d3-/] },
   plugins: [
     nitro({
-      rollupConfig: { external: [/^@sentry\//] },
       // Baseline security headers on every response. Add a `Content-Security-Policy`
       // once you've inventoried the app's inline scripts/styles (framework hydration,
       // motion, charts) and your API origin — a wrong CSP silently breaks the page.
@@ -30,6 +26,7 @@ const config = defineConfig({
     }),
     tailwindcss(),
     tanstackStart(),
+    stylex.vite(),
     viteReact(),
   ],
 });

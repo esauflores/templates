@@ -1,6 +1,12 @@
+import * as stylex from "@stylexjs/stylex";
 import type { ReactNode } from "react";
 
 import { Table, TableBody, TableHeader, TableRow } from "../ui/table";
+
+const styles = stylex.create({
+  empty: { color: "var(--muted-foreground)", fontSize: 14, paddingBlock: 40, textAlign: "center" },
+  scroll: { overflowX: "auto" },
+});
 
 export function DataTable<T>({
   head,
@@ -14,10 +20,10 @@ export function DataTable<T>({
   empty: string;
 }) {
   if (rows.length === 0) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">{empty}</p>;
+    return <p {...stylex.props(styles.empty)}>{empty}</p>;
   }
   return (
-    <div className="overflow-x-auto">
+    <div {...stylex.props(styles.scroll)}>
       <Table>
         <TableHeader>
           <TableRow>{head}</TableRow>

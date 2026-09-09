@@ -2,9 +2,9 @@ import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/rea
 import { Search } from "lucide-react";
 import { useEffect, useRef } from "react";
 
-import { AppSidebar } from "#/components/app-sidebar";
-import { CommandMenu } from "#/components/command-menu";
-import { NotificationBell } from "#/components/notification-bell";
+import { AppSidebar } from "#/components/shell/app-sidebar";
+import { CommandMenu } from "#/components/shell/command-menu";
+import { NotificationBell } from "#/components/shell/notification-bell";
 import { Separator } from "#/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "#/components/ui/sidebar";
 import { useSession } from "#/lib/auth";
@@ -37,7 +37,6 @@ const TITLES: Record<string, string> = {
   "/account": "Account",
   "/billing": "Billing",
   "/changelog": "Changelog",
-  "/getting-started": "Getting started",
   "/settings": "Settings",
 };
 

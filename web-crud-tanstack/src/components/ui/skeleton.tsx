@@ -1,7 +1,19 @@
+import * as stylex from "@stylexjs/stylex";
 import { cn } from "cn";
 
+const styles = stylex.create({
+  skeleton: {
+    animationName: "pulse",
+    animationDuration: "2s",
+    animationIterationCount: "infinite",
+    backgroundColor: "var(--accent)",
+    borderRadius: 6,
+  },
+});
+
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="skeleton" className={cn("animate-pulse rounded-md bg-accent", className)} {...props} />;
+  const style = stylex.props(styles.skeleton);
+  return <div {...props} {...style} className={cn(style.className, className)} data-slot="skeleton" />;
 }
 
 export { Skeleton };

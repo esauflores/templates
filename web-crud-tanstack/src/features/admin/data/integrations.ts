@@ -44,11 +44,4 @@ export const INTEGRATIONS: Integration[] = [
     description: "Attach Drive files to records.",
     connected: true,
   },
-  {
-    id: "sentry",
-    name: "Sentry",
-    category: "Monitoring",
-    description: "Surface error spikes in Activity.",
-    connected: false,
-  },
 ];

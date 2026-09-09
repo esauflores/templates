@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useCrud } from "./use-crud";
@@ -82,5 +82,29 @@ describe("useCrud", () => {
     await flush();
     expect(result.current.items.find((r) => r.id === "b")?.name).toBe("Bo");
     expect(toast.error).toHaveBeenCalledWith("stale");
+  });
+
+  it("keeps a later optimistic update when an earlier request fails", async () => {
+    let rejectFirst!: (reason?: unknown) => void;
+    let resolveSecond!: () => void;
+    const persist = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise<void>((_, reject) => (rejectFirst = reject)))
+      .mockImplementationOnce(() => new Promise<void>((resolve) => (resolveSecond = resolve)));
+    const { result } = renderHook(() => useCrud<Row>(seed, "row", { persist }));
+
+    act(() => {
+      result.current.update("b", { name: "Bobby" }, "Bobby");
+      result.current.update("b", { name: "Robert" }, "Robert");
+    });
+    expect(result.current.items.find((r) => r.id === "b")?.name).toBe("Robert");
+
+    await waitFor(() => expect(persist).toHaveBeenCalledTimes(1));
+    await act(async () => rejectFirst(new Error("stale")));
+    expect(result.current.items.find((r) => r.id === "b")?.name).toBe("Robert");
+
+    await waitFor(() => expect(persist).toHaveBeenCalledTimes(2));
+    await act(async () => resolveSecond());
+    expect(result.current.items.find((r) => r.id === "b")?.name).toBe("Robert");
   });
 });

@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { AiPrompt } from "#/components/ai/ai-prompt";
 import { EmptyState } from "#/components/crud/empty-state";
-import { AiPrompt } from "#/components/kokonutui/ai-prompt";
 import { Button } from "#/components/ui/button";
 import type { ChatMessage } from "#/features/ai/data/conversations";
 import { MODEL_RATES, MODELS_BY_PROVIDER } from "#/features/ai/data/models";
@@ -50,6 +50,8 @@ export const AssistantContent = () => {
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [rendered]);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   // Rough running usage for the whole visible thread — mock estimate, see `estimateTokens`.
   const usage = useMemo(() => {

@@ -8,31 +8,30 @@ Board, Activity feed), _AI_ (streaming Assistant, Prompt library, AI settings), 
 account/billing/settings in the footer menu. No backend: auth, data and the AI model are
 local mocks you swap for your API.
 
-Server-rendered with TanStack Start, styled with Tailwind CSS v4 + shadcn/ui, charts by Bklit.
+Server-rendered with TanStack Start, styled with Tailwind CSS v4 + shadcn/ui and a few compact StyleX dashboard bars.
 Deploys as a self-contained Node server (Nitro).
 
 ---
 
 # Stack
 
-| Layer     | Choice                                                                                  |
-| --------- | --------------------------------------------------------------------------------------- |
-| Framework | TanStack Start 1 (SSR) on Vite 8                                                        |
-| Router    | TanStack Router (file-based, typed) — typed search params                               |
-| Server    | Nitro (`node-server` preset)                                                            |
-| UI        | React 19, Tailwind CSS v4, shadcn/ui (`new-york`, `neutral`), sidebar shell             |
-| Charts    | [Bklit](https://bklit.com) (shadcn registry, visx-based)                                |
-| Tables    | [@tanstack/react-table](https://tanstack.com/table) v9 (`DataGrid`)                     |
-| Forms     | react-hook-form + [zod](https://zod.dev) v4 (`@hookform/resolvers`)                     |
-| Server st | [@tanstack/react-query](https://tanstack.com/query) — provider wired, opt-in per screen |
-| Dates     | [date-fns](https://date-fns.org) (`lib/format`, `overview/weekly`, calendar)            |
-| Errors    | [@sentry/react](https://sentry.io) — client, no-ops without `VITE_SENTRY_DSN`           |
-| AI        | mock streaming chat + prompt library (`features/ai/`), `react-markdown`                 |
-| Extras    | Motion, sonner, @dnd-kit (board), d3-geo (map)                                          |
-| Tests     | Vitest + @testing-library (units), Playwright (e2e), v8 coverage                        |
-| Tooling   | oxlint + oxfmt                                                                          |
-| "Auth"    | Local mock in `src/lib/auth.ts` (localStorage) + client-side `_app` route gate          |
-| Env       | `src/env.ts` — zod-validated `import.meta.env` (`VITE_API_URL`, `VITE_SENTRY_DSN`)      |
+| Layer          | Choice                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------- |
+| Framework      | TanStack Start 1 (SSR) on Vite 8                                                        |
+| Router         | TanStack Router (file-based, typed) — typed search params                               |
+| Server         | Nitro (`node-server` preset)                                                            |
+| UI             | React 19, Tailwind CSS v4, shadcn/ui (`new-york`, `neutral`), sidebar shell             |
+| Dashboard bars | Small StyleX component — no chart package                                               |
+| Tables         | [@tanstack/react-table](https://tanstack.com/table) v9 (`DataGrid`)                     |
+| Forms          | react-hook-form + [zod](https://zod.dev) v4 (`@hookform/resolvers`)                     |
+| Server st      | [@tanstack/react-query](https://tanstack.com/query) — provider wired, opt-in per screen |
+| Dates          | [date-fns](https://date-fns.org) (`lib/format`, `overview/weekly`, calendar)            |
+| AI             | mock streaming chat + prompt library (`features/ai/`), `react-markdown`                 |
+| Extras         | Motion, sonner, @dnd-kit (board)                                                        |
+| Tests          | Vitest + @testing-library (units), Playwright (e2e), v8 coverage                        |
+| Tooling        | oxlint + oxfmt                                                                          |
+| "Auth"         | Local mock in `src/lib/auth.ts` (localStorage) + client-side `_app` route gate          |
+| Env            | `src/env.ts` — zod-validated `import.meta.env` (`VITE_API_URL`)                         |
 
 ---
 
@@ -56,7 +55,7 @@ src/
 ├── features/                       # one folder per sidebar group
 │   ├── overview/         # OverviewContent, ReportsContent (pinned), range-toggle, weekly.ts
 │   ├── sales/            # Customers (+ $id detail), Orders, Invoices, Products
-│   │   └── data/         #   customers, orders, invoices, products, sv-departments(+geo.json)
+│   │   └── data/         #   customers, orders, invoices, products, sv-departments
 │   ├── workspace/        # Projects, Calendar, Files          — data/: projects, events, files
 │   ├── support/          # Tickets, Board, Activity            — data/: tickets, activity
 │   ├── ai/               # Assistant (streaming chat), Prompts (CRUD), AI settings
@@ -73,13 +72,12 @@ src/
 │   │                     #   RowActions/DeleteButton, StatRow, StatusBadge, FormFooter,
 │   │                     #   useZodForm (react-hook-form + zod) / Field / SelectField, EmptyState
 │   ├── ui/               # shadcn/ui primitives (vendored)
-│   └── charts/           # Bklit chart engine (vendored), incl. choropleth/ + shimmering-text
+│   └── simple-bars.tsx   # small dashboard bar chart
 ├── env.ts                # zod-validated `import.meta.env` — import `env`, not `import.meta.env`
 ├── lib/                            # cross-cutting, genuinely shared
 │   ├── auth.ts           # mock session store (signIn / signUp / signOut / useSession) — the auth seam
 │   ├── api.ts            # typed `fetch` wrapper + `crudPersist(resource)` for `useCrud({ persist })`
 │   ├── query.ts          # `getQueryClient()` — one per SSR request, singleton in the browser
-│   ├── sentry.ts         # `initSentry(router)` — client error/perf, no-op without a DSN
 │   ├── format.ts         # currency / fmtDate / daysAgo / fileSize  (used everywhere)
 │   └── utils.ts          # `cn` re-export
 └── styles.css            # Tailwind entry + shadcn + sidebar theme tokens (light + dark)
@@ -93,14 +91,13 @@ title, and `<main>` for the route. Mobile (`< 768px`) shows the sidebar as a she
 
 `AppSidebar` — a `PINNED` array (Overview, Reports) in an unlabelled group, then the `GROUPS`
 array (`{ label, items }[]`) rendered as labelled nav groups, and a footer `DropdownMenu` bound
-to `useSession()` (Account / Billing / Settings, Getting started / Changelog, then Sign out or
+to `useSession()` (Account / Billing / Settings, Changelog, then Sign out or
 Sign in). The header carries a **⌘K** button (`CommandMenu`, mounted in `_app.tsx`, jumps to
 any page or customer) and a **notification bell** (`NotificationBell`) linking to `/notifications`.
 
 Not every screen is a CRUD table — `BoardContent` (`@dnd-kit` columns; drag, keyboard and touch),
-`CalendarContent` (month grid), `ActivityContent` (feed), `ReportsContent` (Bklit area/line/bar/pie
-plus a customers-by-department choropleth of El Salvador — Bklit `ChoroplethChart`; region GeoJSON
-in `sales/data/sv-departments.ts`, `d3-geo` fits the projection to its bounds), `RolesContent` (permission
+`CalendarContent` (month grid), `ActivityContent` (feed), `ReportsContent` (small dashboard bars),
+`RolesContent` (permission
 checkbox matrix), and `CustomerDetailContent`
 (`/customers/$id`, a record with its related orders / invoices / tickets) show other common shapes
 built on the same primitives.
@@ -169,11 +166,6 @@ const { data = SEED } = useQuery({ queryKey: ["projects"], queryFn: () => api.ge
 // pair invalidation with the mutation: crudPersist + queryClient.invalidateQueries({ queryKey: ["projects"] })
 ```
 
-**Errors (Sentry)** — `lib/sentry.ts` `initSentry(router)` runs from `router.tsx`; it no-ops
-without `VITE_SENTRY_DSN`, so the template runs unconfigured. Router navigation spans +
-`RouteError` reports render/loader errors. Server (Nitro) errors would need `@sentry/node` in a
-Nitro plugin — not wired.
-
 ## AI (`features/ai/`)
 
 Everything runs **offline on a mock**. `lib/ai.ts` — `streamChat(messages, { config, signal })`
@@ -219,8 +211,8 @@ pnpm test           # vitest, one-shot   (test:watch, test:cov for coverage)
 pnpm test:e2e       # playwright — boots pnpm dev itself
 ```
 
-**Env** — `VITE_API_URL` (CRUD API base) and `VITE_SENTRY_DSN` (error reporting), both optional and
-validated in `src/env.ts`; unset, the app runs fully in-memory with no telemetry.
+**Env** — `VITE_API_URL` (CRUD API base) is optional and validated in `src/env.ts`; unset, the app
+runs fully in-memory.
 `.github/workflows/web-crud-tanstack-ci.yml` runs lint / fmt:check / typecheck / test / build on push + PR, plus
 a separate e2e job.
 

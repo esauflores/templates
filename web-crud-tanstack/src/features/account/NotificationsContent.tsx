@@ -1,7 +1,7 @@
 import { AtSign, Bell, CreditCard, MessageSquare, UserPlus } from "lucide-react";
 import { useState } from "react";
 
-import { StatRow } from "#/components/crud/stats";
+import { StatRow } from "#/components/analytics/stats";
 import { Button } from "#/components/ui/button";
 import { NOTIFICATION_KINDS, NOTIFICATIONS, type NotificationKind } from "#/features/account/data/notifications";
 import { fromNow } from "#/lib/format";

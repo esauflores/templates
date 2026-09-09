@@ -1,10 +1,16 @@
+import * as stylex from "@stylexjs/stylex";
 import type { ReactNode } from "react";
 import { type Control, Controller, type FieldPath, type FieldValues } from "react-hook-form";
 
-import { cn } from "#/lib/utils";
-
 import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+
+const styles = stylex.create({
+  field: { display: "grid", gap: 6 },
+  error: { color: "var(--destructive)" },
+  errorText: { color: "var(--destructive)", fontSize: 12 },
+  capitalize: { textTransform: "capitalize" },
+});
 
 /** Label + control + inline error, for the CRUD dialog forms. */
 export const Field = ({
@@ -20,12 +26,12 @@ export const Field = ({
   className?: string;
   children: ReactNode;
 }) => (
-  <div className={cn("grid gap-1.5", className)}>
-    <Label htmlFor={htmlFor} className={error ? "text-destructive" : undefined}>
+  <div {...stylex.props(styles.field)} className={className}>
+    <Label htmlFor={htmlFor} {...stylex.props(!!error && styles.error)}>
       {label}
     </Label>
     {children}
-    {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    {error ? <p {...stylex.props(styles.errorText)}>{error}</p> : null}
   </div>
 );
 
@@ -58,7 +64,7 @@ export const SelectField = <F extends FieldValues>({
           </SelectTrigger>
           <SelectContent>
             {options.map((o) => (
-              <SelectItem key={o} value={o} className={capitalize ? "capitalize" : undefined}>
+              <SelectItem key={o} value={o} {...stylex.props(capitalize && styles.capitalize)}>
                 {o}
               </SelectItem>
             ))}

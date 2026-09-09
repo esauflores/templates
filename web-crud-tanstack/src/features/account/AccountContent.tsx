@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "#/com
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { TableCell, TableHead, TableRow } from "#/components/ui/table";
-import { UserAvatar } from "#/components/user-avatar";
+import { UserAvatar } from "#/components/ui/user-avatar";
 import { SESSIONS } from "#/features/account/data/sessions";
 import { useSession } from "#/lib/auth";
 import { fromNow } from "#/lib/format";

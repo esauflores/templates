@@ -1,14 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
 
+import { StatRow } from "#/components/analytics/stats";
 import { bulkRemove, type Column, DataGrid } from "#/components/crud/data-grid";
 import { EmptyState } from "#/components/crud/empty-state";
 import { Field, SelectField } from "#/components/crud/field";
 import { FormFooter } from "#/components/crud/form-footer";
 import { CrudDialog } from "#/components/crud/page";
 import { RowActions } from "#/components/crud/row-actions";
-import { StatRow } from "#/components/crud/stats";
 import { useCrud } from "#/components/crud/use-crud";
 import { useZodForm } from "#/components/crud/use-zod-form";
 import { Badge } from "#/components/ui/badge";
@@ -16,7 +16,7 @@ import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { Textarea } from "#/components/ui/textarea";
-import { PROMPT_CATEGORIES, PROMPTS, type Prompt, type PromptCategory } from "#/features/ai/data/prompts";
+import { PROMPT_CATEGORIES, PROMPTS, type Prompt } from "#/features/ai/data/prompts";
 import { fillTemplate, promptVars } from "#/features/ai/lib/prompt";
 import { crudPersist } from "#/lib/api";
 import { daysAgo, fmtDate } from "#/lib/format";
@@ -26,10 +26,11 @@ const persist = crudPersist<Prompt>("ai/prompts");
 const schema = z.object({
   title: z.string().trim().min(1, "Title is required").max(80, "Keep it under 80 characters"),
   body: z.string().trim().min(1, "Body is required"),
-  category: z.enum(PROMPT_CATEGORIES as [PromptCategory, ...PromptCategory[]]),
+  category: z.enum(PROMPT_CATEGORIES),
   tags: z.string().trim().default(""),
 });
 type Draft = z.infer<typeof schema>;
+const submit = (d: Draft): Omit<Prompt, "id"> => ({ ...d, updatedAt: daysAgo(0) });
 
 export const PromptsContent = () => {
   const navigate = useNavigate();
@@ -38,14 +39,14 @@ export const PromptsContent = () => {
   const [editing, setEditing] = useState<Prompt | null>(null);
   const [using, setUsing] = useState<Prompt | null>(null);
 
-  const submit = (d: Draft): Omit<Prompt, "id"> => ({ ...d, updatedAt: daysAgo(0) });
-
-  const runInChat = (seed: string) => navigate({ to: "/assistant", search: { seed } });
-
-  const use = (p: Prompt) => {
-    if (promptVars(p.body).length === 0) runInChat(p.body);
-    else setUsing(p);
-  };
+  const runInChat = useCallback((seed: string) => navigate({ to: "/assistant", search: { seed } }), [navigate]);
+  const usePrompt = useCallback(
+    (prompt: Prompt) => {
+      if (promptVars(prompt.body).length === 0) runInChat(prompt.body);
+      else setUsing(prompt);
+    },
+    [runInChat],
+  );
 
   const columns = useMemo<Column<Prompt>[]>(
     () => [
@@ -76,7 +77,7 @@ export const PromptsContent = () => {
         header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <Button size="xs" variant="ghost" onClick={() => use(row.original)}>
+            <Button size="xs" variant="ghost" onClick={() => usePrompt(row.original)}>
               Use
             </Button>
             <RowActions
@@ -94,7 +95,7 @@ export const PromptsContent = () => {
         ),
       },
     ],
-    [create, remove],
+    [create, remove, usePrompt],
   );
 
   return (

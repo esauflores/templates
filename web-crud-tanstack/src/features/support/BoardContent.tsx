@@ -23,8 +23,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { StatusBadge } from "#/components/crud/status-badge";
 import { Card } from "#/components/ui/card";
+import { StatusBadge } from "#/components/ui/status-badge";
 import { TICKET_STATUSES, type Ticket, type TicketStatus, TICKETS } from "#/features/support/data/tickets";
 import { fmtDate } from "#/lib/format";
 import { cn } from "#/lib/utils";
@@ -69,7 +69,7 @@ const Column = ({ status, tickets }: { status: TicketStatus; tickets: Ticket[] }
     <div
       ref={setNodeRef}
       className={cn(
-        "flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 transition-colors",
+        "flex max-h-[calc(100dvh-10rem)] flex-col gap-3 rounded-lg border bg-muted/30 p-3 transition-colors",
         isOver && "border-primary bg-primary/5",
       )}
     >
@@ -77,12 +77,16 @@ const Column = ({ status, tickets }: { status: TicketStatus; tickets: Ticket[] }
         <span>{COLUMN_LABEL[status]}</span>
         <span className="tabular-nums text-muted-foreground">{tickets.length}</span>
       </div>
-      <SortableContext items={tickets.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-        {tickets.map((t) => (
-          <SortableTicket key={t.id} ticket={t} />
-        ))}
-      </SortableContext>
-      {tickets.length === 0 && <p className="px-1 py-6 text-center text-xs text-muted-foreground">Drop tickets here</p>}
+      <div className="min-h-0 space-y-3 overflow-y-auto">
+        <SortableContext items={tickets.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+          {tickets.map((t) => (
+            <SortableTicket key={t.id} ticket={t} />
+          ))}
+        </SortableContext>
+        {tickets.length === 0 && (
+          <p className="px-1 py-6 text-center text-xs text-muted-foreground">Drop tickets here</p>
+        )}
+      </div>
     </div>
   );
 };

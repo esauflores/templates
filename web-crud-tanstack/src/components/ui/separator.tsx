@@ -1,23 +1,27 @@
+import * as stylex from "@stylexjs/stylex";
 import { cn } from "cn";
-import { Separator as SeparatorPrimitive } from "radix-ui";
 import * as React from "react";
+
+const styles = stylex.create({
+  base: { backgroundColor: "var(--border)", flexShrink: 0 },
+  horizontal: { height: 1, width: "100%" },
+  vertical: { height: "100%", width: 1 },
+});
 
 function Separator({
   className,
   orientation = "horizontal",
-  decorative = true,
   ...props
-}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+}: React.ComponentProps<"div"> & { orientation?: "horizontal" | "vertical" }) {
+  const style = stylex.props(styles.base, orientation === "horizontal" ? styles.horizontal : styles.vertical);
   return (
-    <SeparatorPrimitive.Root
-      data-slot="separator"
-      decorative={decorative}
-      orientation={orientation}
-      className={cn(
-        "shrink-0 bg-border data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
-        className,
-      )}
+    <div
       {...props}
+      {...style}
+      className={cn(style.className, className)}
+      data-slot="separator"
+      role="separator"
+      aria-orientation={orientation}
     />
   );
 }

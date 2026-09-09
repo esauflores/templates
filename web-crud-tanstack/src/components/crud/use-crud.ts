@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
 /** The change to send to your API. Shape it however your backend wants. */
@@ -19,6 +19,13 @@ type Options<T> = {
 const NOOP = () => Promise.resolve();
 const reason = (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback);
 
+const apply = <T extends { id: string }>(items: T[], change: CrudChange<T>) => {
+  if (change.type === "create") return [change.item, ...items];
+  if (change.type === "update")
+    return items.map((item) => (item.id === change.id ? { ...item, ...change.patch } : item));
+  return items.filter((item) => !change.ids.includes(item.id));
+};
+
 /**
  * Optimistic in-memory CRUD store. Every mutation updates state immediately,
  * then awaits `persist`; on failure it rolls back and shows an error toast.
@@ -29,60 +36,82 @@ const reason = (err: unknown, fallback: string) => (err instanceof Error ? err.m
  */
 export function useCrud<T extends { id: string }>(seed: T[], noun: string, { persist = NOOP }: Options<T> = {}) {
   const [items, setItems] = useState<T[]>(seed);
+  const confirmed = useRef(seed);
+  const pending = useRef<CrudChange<T>[]>([]);
+  const visible = useRef(seed);
+  // ponytail: serialize one list's writes; use per-record rebase only if mutation throughput matters.
+  const queue = useRef(Promise.resolve());
+
+  const publish = useCallback(() => {
+    const next = pending.current.reduce(apply<T>, confirmed.current);
+    visible.current = next;
+    setItems(next);
+  }, []);
+
+  const enqueue = useCallback(
+    (change: CrudChange<T>, onSuccess?: () => void, onError?: (err: unknown) => void) => {
+      pending.current.push(change);
+      publish();
+      queue.current = queue.current.then(async () => {
+        try {
+          await persist(change);
+          confirmed.current = apply(confirmed.current, change);
+          onSuccess?.();
+        } catch (err) {
+          onError?.(err);
+        } finally {
+          pending.current = pending.current.filter((pendingChange) => pendingChange !== change);
+          publish();
+        }
+      });
+    },
+    [persist, publish],
+  );
 
   const create = useCallback(
     (draft: Omit<T, "id">, label: string) => {
       const item = { ...draft, id: crypto.randomUUID() } as T;
-      setItems((prev) => [item, ...prev]);
-      persist({ type: "create", item })
-        .then(() => toast.success(`Created ${noun} “${label}”`))
-        .catch((err) => {
-          setItems((prev) => prev.filter((it) => it.id !== item.id));
-          toast.error(reason(err, `Couldn't create ${noun}`));
-        });
+      enqueue(
+        { type: "create", item },
+        () => toast.success(`Created ${noun} “${label}”`),
+        (err) => toast.error(reason(err, `Couldn't create ${noun}`)),
+      );
     },
-    [noun, persist],
+    [enqueue, noun],
   );
 
   const update = useCallback(
     (id: string, patch: Partial<T>, label: string) => {
-      let prevRow: T | undefined;
-      setItems((prev) =>
-        prev.map((it) => {
-          if (it.id !== id) return it;
-          prevRow = it;
-          return { ...it, ...patch };
-        }),
+      enqueue(
+        { type: "update", id, patch },
+        () => toast.success(`Updated ${noun} “${label}”`),
+        (err) => toast.error(reason(err, `Couldn't update ${noun}`)),
       );
-      persist({ type: "update", id, patch })
-        .then(() => toast.success(`Updated ${noun} “${label}”`))
-        .catch((err) => {
-          if (prevRow) setItems((prev) => prev.map((it) => (it.id === id ? (prevRow as T) : it)));
-          toast.error(reason(err, `Couldn't update ${noun}`));
-        });
     },
-    [noun, persist],
+    [enqueue, noun],
   );
 
   const drop = useCallback(
     (ids: Set<string>, label: string) => {
-      let snapshot: T[] = [];
-      setItems((prev) => {
-        snapshot = prev;
-        return prev.filter((it) => !ids.has(it.id));
-      });
-      persist({ type: "delete", ids: [...ids] })
-        .then(() =>
+      const deleted = visible.current.filter((item) => ids.has(item.id));
+      enqueue(
+        { type: "delete", ids: [...ids] },
+        () =>
           toast.success(`Deleted ${label}`, {
-            action: { label: "Undo", onClick: () => setItems(snapshot) },
+            action: {
+              label: "Undo",
+              onClick: () =>
+                deleted.forEach((item) =>
+                  enqueue({ type: "create", item }, undefined, (err) =>
+                    toast.error(reason(err, `Couldn't restore ${noun}`)),
+                  ),
+                ),
+            },
           }),
-        )
-        .catch((err) => {
-          setItems(snapshot);
-          toast.error(reason(err, `Couldn't delete ${label}`));
-        });
+        (err) => toast.error(reason(err, `Couldn't delete ${label}`)),
+      );
     },
-    [persist],
+    [enqueue, noun],
   );
 
   const remove = useCallback((id: string, label: string) => drop(new Set([id]), `${noun} “${label}”`), [drop, noun]);

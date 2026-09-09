@@ -1,18 +1,18 @@
 import { useMemo, useState } from "react";
 import { z } from "zod";
 
+import { StatRow } from "#/components/analytics/stats";
 import { bulkRemove, type Column, DataGrid } from "#/components/crud/data-grid";
 import { EmptyState } from "#/components/crud/empty-state";
 import { Field, SelectField } from "#/components/crud/field";
 import { FormFooter } from "#/components/crud/form-footer";
 import { CrudDialog } from "#/components/crud/page";
 import { RowActions } from "#/components/crud/row-actions";
-import { StatRow } from "#/components/crud/stats";
-import { StatusBadge } from "#/components/crud/status-badge";
 import { useCrud } from "#/components/crud/use-crud";
 import { useZodForm } from "#/components/crud/use-zod-form";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
+import { StatusBadge } from "#/components/ui/status-badge";
 import {
   LOW_STOCK,
   PRODUCT_STATUSES,
@@ -105,7 +105,8 @@ export const ProductsContent = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Products</h1>
         <CrudDialog
           title="New product"
           open={createOpen}

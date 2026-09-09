@@ -1,7 +1,5 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 
-import { initSentry } from "#/lib/sentry";
-
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
@@ -11,9 +9,6 @@ export function getRouter() {
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
   });
-
-  initSentry(router); // no-op on the server and without VITE_SENTRY_DSN
-
   return router;
 }
 
