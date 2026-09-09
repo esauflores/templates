@@ -1,15 +1,15 @@
-name: ai ci
+name: api-node-hono ci
 
 on:
   push:
     branches: [main]
-    paths: ["ai/**", ".github/workflows/ai-ci.yml"]
+    paths: ["api-node-hono/**", ".github/workflows/api-node-hono-ci.yml"]
   pull_request:
-    paths: ["ai/**", ".github/workflows/ai-ci.yml"]
+    paths: ["api-node-hono/**", ".github/workflows/api-node-hono-ci.yml"]
 
 defaults:
   run:
-    working-directory: ai
+    working-directory: api-node-hono
 
 jobs:
   ci:
@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: ai/pnpm-lock.yaml
+          cache-dependency-path: api-node-hono/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
       - run: pnpm run fmt:check

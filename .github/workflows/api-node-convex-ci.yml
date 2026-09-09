@@ -1,15 +1,15 @@
-name: api ci
+name: api-node-convex ci
 
 on:
   push:
     branches: [main]
-    paths: ["api/**", ".github/workflows/api-ci.yml"]
+    paths: ["api-node-convex/**", ".github/workflows/api-node-convex-ci.yml"]
   pull_request:
-    paths: ["api/**", ".github/workflows/api-ci.yml"]
+    paths: ["api-node-convex/**", ".github/workflows/api-node-convex-ci.yml"]
 
 defaults:
   run:
-    working-directory: api
+    working-directory: api-node-convex
 
 jobs:
   ci:
@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: api/pnpm-lock.yaml
+          cache-dependency-path: api-node-convex/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
       - run: pnpm run fmt:check
