@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "indent": 2,
+  "printWidth": 120,
+  "ignorePatterns": ["src/routeTree.gen.ts"],
+  "sortImports": {
+    "order": "asc",
+    "partitionByComment": true
+  }
+}
