@@ -23,14 +23,14 @@ export default defineRailway(() => {
   });
 
   const valkey = service("valkey", {
-    source: github("esauflores/templates", { checkSuites: false, rootDirectory: "railway-backend/valkey" }),
+    source: github("esauflores/templates", { checkSuites: false, rootDirectory: "backend-base/valkey" }),
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
     replicas: { "us-west2": 1 },
     volumeMounts: { "/data": valkeyData },
   });
 
   const postgres = service("postgres", {
-    source: github("esauflores/templates", { checkSuites: false, rootDirectory: "railway-backend/postgres" }),
+    source: github("esauflores/templates", { checkSuites: false, rootDirectory: "backend-base/postgres" }),
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
     replicas: { "us-west2": 1 },
     volumeMounts: { "/var/lib/postgresql": postgresData },
@@ -38,7 +38,7 @@ export default defineRailway(() => {
   });
 
   const seaweedfs = service("seaweedfs", {
-    source: github("esauflores/templates", { checkSuites: false, rootDirectory: "railway-backend/seaweedfs" }),
+    source: github("esauflores/templates", { checkSuites: false, rootDirectory: "backend-base/seaweedfs" }),
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
     replicas: { "us-west2": 1 },
     volumeMounts: { "/data": seaweedfsData },

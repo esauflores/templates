@@ -1,4 +1,4 @@
-# railway-backend
+# backend-base
 
 Railway backend template: Postgres (+pgvector/PostGIS/pg_trgm), Valkey, SeaweedFS (S3).
 
