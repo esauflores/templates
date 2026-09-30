@@ -1,0 +1,4 @@
+# Railway template spec — drag onto a project canvas or the Template Creator.
+# Pulls in the per-service compose files. Not a runtime config.
+include:
+  - inference/docker-compose.yml

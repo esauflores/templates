@@ -1,0 +1,7 @@
+services:
+  inference:
+    build: .
+    expose:
+      - 8000
+    environment:
+      MODEL_PATH: /app/model.onnx
