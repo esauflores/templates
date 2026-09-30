@@ -1,21 +1,21 @@
 {
   "name": "@you/npm-cli-base",
   "version": "0.0.0",
-  "description": "CLI template — TypeScript, tsc build to dist, node shebang, npm-ready",
+  "description": "CLI template — TypeScript on bun, oxlint + oxfmt + tsc checks, npm-ready",
   "license": "MIT",
   "bin": {
-    "cli-name": "dist/cli.js"
+    "cli-name": "src/cli.ts"
   },
   "files": [
-    "dist"
+    "src",
+    "!src/**/*.test.ts"
   ],
   "type": "module",
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "check": "oxlint && oxfmt --check && tsc --noEmit",
     "check:fix": "oxlint --fix && oxfmt --write",
-    "prepack": "npm run build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "cli": "bun run src/cli.ts"
   },
   "dependencies": {
     "commander": "^15.0.0"
@@ -28,6 +28,6 @@
     "vitest": "^5.0.3"
   },
   "engines": {
-    "node": ">=18.18"
+    "bun": ">=1.4"
   }
 }

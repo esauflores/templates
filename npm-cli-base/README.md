@@ -1,9 +1,8 @@
 # npm-cli-base
 
-Template for an npm-published CLI, extracted from a real shipped one
-(`@esauflores/zoom-dl`): TypeScript source, `tsc` build to `dist/`, node shebang,
-vitest specs, oxlint + oxfmt. The whole pipeline is verified — check → test → build
-→ `node dist/cli.js` runs.
+Template for a bun CLI published to npm, extracted from a real shipped one
+(`@esauflores/zoom-dl`): TypeScript runs directly on bun — no build step — with
+oxlint + oxfmt + tsc checks and vitest specs.
 
 ## use it
 
@@ -16,17 +15,20 @@ vitest specs, oxlint + oxfmt. The whole pipeline is verified — check → test 
 ## layout
 
 ```
-package.json         bin → dist/cli.js, files: ["dist"], prepack rebuilds
-tsconfig.json        strict, used by check (tsc --noEmit)
-tsconfig.build.json  emit config: outDir dist, rewrites .ts import extensions
-src/cli.ts           commander entry (node shebang is preserved into dist/)
-src/helpers/         pure logic + error plumbing, vitest specs alongside
-dist/                build output — what npm ships (gitignored)
+package.json      bin → src/cli.ts, files: ["src"] (tests excluded), bun engines
+tsconfig.json     strict, used by check (tsc --noEmit)
+src/cli.ts        commander entry (bun shebang — bun runs .ts directly)
+src/helpers/      pure logic + error plumbing, vitest specs alongside
 ```
+
+## checks
+
+`bun run check` = `oxlint && oxfmt --check && tsc --noEmit` — lint, format,
+types. `bun run check:fix` auto-fixes lint and format.
 
 ## notes
 
-- the published binary runs on plain Node.js >= 18 — no bun needed
-- `prepack` rebuilds `dist/`, so a tarball can never go stale
-- tests are excluded from the build and the tarball
-- run `bun run build && node dist/cli.js --help` before publishing to smoke-test
+- the published binary needs bun on PATH (`#!/usr/bin/env bun`)
+- there is no build step: what you write is what npm ships
+- tests are excluded from the tarball via `files`
+- smoke-test before publishing: `bun run cli -- --help`

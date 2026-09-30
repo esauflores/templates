@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // cli-name — one-line description of what it does.
 //
 // usage: cli-name <name> [count] [-u, --upper]
