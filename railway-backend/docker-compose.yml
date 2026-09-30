@@ -1,32 +1,6 @@
-# Railway template spec.
-# Drag onto a project canvas or the Template Creator to import
-# services and volumes as staged changes. Not a runtime config.
-
-services:
-  postgres:
-    build: ./postgres
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql
-    expose:
-      - "5432"
-
-  valkey:
-    build: ./valkey
-    volumes:
-      - valkey_data:/data
-    expose:
-      - "6379"
-
-  seaweedfs:
-    build: ./seaweedfs
-    volumes:
-      - seaweedfs_data:/data
-    expose:
-      - "8333"
-
-volumes:
-  postgres_data:
-  valkey_data:
-  seaweedfs_data:
+# Railway template spec — drag onto a project canvas or the Template Creator.
+# Pulls in the per-service compose files. Not a runtime config.
+include:
+  - postgres/docker-compose.yml
+  - valkey/docker-compose.yml
+  - seaweedfs/docker-compose.yml

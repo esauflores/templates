@@ -1,0 +1,10 @@
+services:
+  seaweedfs:
+    build: .
+    volumes:
+      - seaweedfs_data:/data
+    expose:
+      - "8333"
+
+volumes:
+  seaweedfs_data:
