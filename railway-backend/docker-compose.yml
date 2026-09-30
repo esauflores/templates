@@ -1,0 +1,32 @@
+# Railway template spec.
+# Drag onto a project canvas or the Template Creator to import
+# services and volumes as staged changes. Not a runtime config.
+
+services:
+  postgres:
+    build: ./postgres
+    environment:
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+
+  valkey:
+    build: ./valkey
+    volumes:
+      - valkey_data:/data
+    ports:
+      - "6379:6379"
+
+  seaweedfs:
+    build: ./seaweedfs
+    volumes:
+      - seaweedfs_data:/data
+    ports:
+      - "8333:8333"
+
+volumes:
+  postgres_data:
+  valkey_data:
+  seaweedfs_data:
