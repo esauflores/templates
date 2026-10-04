@@ -1,18 +1,15 @@
-# backend-base
+# Backend base
 
-Railway backend template: Postgres (+pgvector/PostGIS/pg_trgm), Valkey, SeaweedFS (S3).
+Docker Compose services: PostgreSQL, Valkey, and SeaweedFS (S3).
 
-## Use as a Railway template
+```sh
+POSTGRES_PASSWORD=change-me docker compose up -d
+```
 
-Drag `docker-compose.yml` onto a Railway project canvas (or feed it to the Template Creator) —
-services and volumes import as staged changes. The file is an import spec, not a runtime config.
+Services are available to each other by name on the Compose network:
 
-| Service   | Image                    | Internal Port | Volume                     | Flags                                 |
-| --------- | ------------------------ | ------------- | -------------------------- | ------------------------------------- |
-| postgres  | `postgres:18`            | 5432          | `/var/lib/postgresql/data` | `POSTGRES_PASSWORD`                   |
-| valkey    | `valkey/valkey:9-alpine` | 6379          | `/data`                    | `--appendonly yes`                    |
-| seaweedfs | `chrislusf/seaweedfs`    | 8333          | `/data`                    | `server -s3 -dir=/data -s3.port=8333` |
+- PostgreSQL: `postgres:5432`
+- Valkey: `valkey:6379`
+- SeaweedFS S3: `seaweedfs:8333`
 
-- Extensions (`vector`, `postgis`, `pg_trgm`, `unaccent`) are created on first boot by `postgres/init-extensions.sql`.
-- Auth model: postgres only (`${POSTGRES_PASSWORD}`); valkey and seaweedfs run unauthenticated **by design** — this is a backend template for Railway private networking, behind the API. Never expose 6379/8333 publicly; add `-s3.auth`/`requirepass` only if that changes.
-- `${POSTGRES_PASSWORD}` is a Railway template variable — prompted on deploy. Locally: `POSTGRES_PASSWORD=change-me docker compose up --build`.
+Data is stored in named volumes. Ports are not published to the host; add `ports` mappings if you need host access.

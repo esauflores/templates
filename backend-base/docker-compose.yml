@@ -1,6 +1,23 @@
-# Railway template spec — drag onto a project canvas or the Template Creator.
-# Pulls in the per-service compose files. Not a runtime config.
-include:
-  - postgres/docker-compose.yml
-  - valkey/docker-compose.yml
-  - seaweedfs/docker-compose.yml
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  valkey:
+    image: valkey/valkey:9-alpine
+    volumes:
+      - valkey_data:/data
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    command: server -s3 -dir=/data
+    volumes:
+      - seaweedfs_data:/data
+
+volumes:
+  postgres_data:
+  valkey_data:
+  seaweedfs_data:
