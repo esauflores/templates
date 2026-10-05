@@ -9,6 +9,6 @@ FROM python:3.12-slim-bookworm
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY app ./app
-ENV PATH="/app/.venv/bin:$PATH" MODEL_PATH=/app/model.onnx
+ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

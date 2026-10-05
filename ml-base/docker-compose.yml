@@ -1,4 +1,18 @@
-# Railway template spec — drag onto a project canvas or the Template Creator.
-# Pulls in the per-service compose files. Not a runtime config.
-include:
-  - inference/docker-compose.yml
+services:
+  python-inference:
+    build: ./inference/python
+    ports:
+      - "8000:8000"
+    environment:
+      MODEL_PATH: /models/mnist-8.onnx
+    volumes:
+      - ./models:/models:ro
+
+  javascript-inference:
+    build: ./inference/js
+    ports:
+      - "8001:8000"
+    environment:
+      MODEL_PATH: /models/mnist-8.onnx
+    volumes:
+      - ./models:/models:ro

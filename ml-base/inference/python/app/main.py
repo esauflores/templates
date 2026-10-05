@@ -12,4 +12,4 @@ def health() -> dict:
 
 @app.post("/infer")
 def infer_route(inputs: list[list[float]] = Body(embed=True)) -> dict:
-    return {"embeddings": infer(inputs)}
+    return {"scores": infer(inputs)}

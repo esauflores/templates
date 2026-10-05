@@ -1,18 +1,20 @@
-# ml-base
+# ML base
 
-Railway ML inference template: FastAPI + ONNX Runtime (CPU).
+CPU ONNX digit-inference examples: FastAPI + ONNX Runtime for Python, and Hono + ONNX Runtime for Node.js. Both use `models/mnist-8.onnx`.
 
-## Use as a Railway template
+Start both services:
 
-Drag `docker-compose.yml` onto a project canvas (or feed it to the Template Creator) —
-services import as staged changes. The file is an import spec, not a runtime config.
+```sh
+docker compose up --build
+```
 
-| Service   | Image                                       | Internal Port | Volume | Flags                  |
-| --------- | ------------------------------------------- | ------------- | ------ | ---------------------- |
-| inference | `python:3.12-slim` (multi-stage uv builder) | 8000          | —      | ONNX CPU, `MODEL_PATH` |
+- Python: `http://localhost:8000`
+- JavaScript: `http://localhost:8001`
 
-- Generic inference endpoint: drop a `model.onnx` into `inference/` (baked into the image) or set `MODEL_PATH`. Without one, a deterministic stub runs so the service boots green and the pipeline stays testable.
-- Endpoints: `GET /health` (`status` + `model_loaded`), `POST /infer` `{"inputs": [[floats]]}` → `{"embeddings": [[floats]]}`.
-- Bring your own model: embeddings, classifiers, translators (e.g. an ONNX export of lessa-traductor) all fit; reshape `/infer` when the head changes (labels, tokens).
-- Internal-only, no auth — same model as backend-base: private networking, behind the API.
-- One runnable check: `cd inference && uv sync --group dev && uv run --group dev python -m app.check`.
+Both expose `GET /health` and `POST /infer`, accepting `{"inputs": [[784 pixel values]]}` and returning `{"scores": [[10 digit scores]]}`. Pixel values should be grayscale floats from 0 to 1, flattened from 28×28 images.
+
+Run the Python check with `cd inference/python && uv sync --group dev && uv run --group dev python -m app.check`.
+
+Training code belongs in `training/` and should remain Python-only.
+
+Model: [ONNX Model Zoo MNIST-8](https://huggingface.co/onnxmodelzoo/mnist-8).
