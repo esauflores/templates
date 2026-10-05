@@ -1,6 +1,2 @@
-node_modules/
-.venv/
-__pycache__/
-.ruff_cache/
 *.onnx
 !models/*.onnx
