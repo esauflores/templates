@@ -5,9 +5,6 @@
 
 import { Command } from "commander";
 
-import { die } from "./helpers/errors.ts";
-import { greet } from "./helpers/text.ts";
-
 await new Command()
   .name("cli-name")
   .description("One-line description of what this CLI does")
@@ -16,14 +13,18 @@ await new Command()
   .option("-u, --upper", "shout it")
   .addHelpText(
     "after",
-    `
-examples:
+    `\nExamples:
   cli-name world            # hello, world
-  cli-name world 3 --upper  # HELLO, WORLD ×3`,
+  cli-name world 3 --upper  # HELLO, WORLD ×3
+    `,
   )
   .action((name: string, count: string | undefined, opts: { upper?: boolean }) => {
     const n = count == null ? 1 : Number(count);
-    if (!Number.isInteger(n) || n < 1) die(`invalid count: ${count}`);
-    for (let i = 0; i < n; i++) console.log(greet(name, opts.upper));
+    if (!Number.isInteger(n) || n < 1) {
+      console.error(`cli-name: invalid count: ${count}`);
+      process.exit(1);
+    }
+    const greeting = `hello, ${name}`;
+    for (let i = 0; i < n; i++) console.log(opts.upper ? greeting.toUpperCase() : greeting);
   })
   .parseAsync();
