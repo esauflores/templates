@@ -1,7 +1,6 @@
-FROM node:22-slim
+FROM oven/bun:1.4
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production
 COPY src ./src
-EXPOSE 8000
-CMD ["npm", "start"]
+CMD ["bun", "run", "start"]

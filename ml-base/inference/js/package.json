@@ -1,14 +1,12 @@
 {
   "type": "module",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "bun src/index.js"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.0",
     "hono": "^4.9.0",
     "onnxruntime-node": "^1.22.0"
   },
-  "allowScripts": {
-    "onnxruntime-node@1.30.0": true
-  }
+  "trustedDependencies": ["onnxruntime-node"]
 }
