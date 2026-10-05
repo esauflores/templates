@@ -1,5 +1,5 @@
 {
-  "name": "@you/npm-cli-base",
+  "name": "@you/bun-cli-base",
   "version": "0.0.0",
   "description": "CLI template — TypeScript on bun, npm-ready",
   "license": "MIT",

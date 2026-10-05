@@ -1,10 +1,10 @@
-# npm-cli-base
+# bun-cli-base
 
 Minimal template for a Bun CLI published to npm: TypeScript runs directly on Bun — no build step.
 
 ## use it
 
-1. copy this directory; rename `@you/npm-cli-base` and the `bin` name in `cli/package.json`
+1. copy this directory; rename `@you/bun-cli-base` and the `bin` name in `cli/package.json`
 2. write your CLI in `cli/src/cli.ts`
 3. `cd cli && bun install && bun run check`
 4. from `cli/`, run `npm login` and `npm publish --access public --otp=<your 2FA digits>`

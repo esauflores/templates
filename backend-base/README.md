@@ -3,7 +3,8 @@
 Docker Compose services: PostgreSQL, Valkey, and SeaweedFS (S3).
 
 ```sh
-POSTGRES_PASSWORD=change-me docker compose up -d
+cp .env.example .env
+docker compose up -d
 ```
 
 Services are available to each other by name on the Compose network:

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@you/npm-cli-base",
+      "name": "@you/bun-cli-base",
       "dependencies": {
         "commander": "^15.0.0",
       },
