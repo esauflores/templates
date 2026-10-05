@@ -2,7 +2,7 @@ from fastapi import Body, FastAPI
 
 from .model import infer, session
 
-app = FastAPI(title="ml-base inference")
+app = FastAPI(title="ml-inference")
 
 
 @app.get("/health")

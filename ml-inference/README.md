@@ -1,4 +1,4 @@
-# ML base
+# ML inference
 
 CPU ONNX digit-inference examples: FastAPI + ONNX Runtime for Python, and Hono + `onnxruntime-node` running on Bun. Both use `models/mnist-8.onnx`.
 

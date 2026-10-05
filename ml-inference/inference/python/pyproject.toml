@@ -1,5 +1,5 @@
 [project]
-name = "ml-base-inference"
+name = "ml-inference-python"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
