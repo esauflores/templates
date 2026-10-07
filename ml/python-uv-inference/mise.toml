@@ -1,0 +1,26 @@
+[tools]
+uv = "latest"
+
+[env]
+_.file = ".env"
+PORT = { default = "8000" }
+
+[tasks.check]
+run = ["uv run ruff check .", "uv run ruff format --check ."]
+
+[tasks.check-fix]
+run = [
+    "uv run ruff check --fix .",
+    "uv run ruff format .",
+    "uv run ruff check .",
+    "uv run ruff format --check .",
+]
+
+[tasks.test]
+run = "uv run pytest"
+
+[tasks.dev]
+run = "uv run uvicorn app.main:app --reload --port $PORT"
+
+[tasks.start]
+run = "uv run uvicorn app.main:app --port $PORT"
