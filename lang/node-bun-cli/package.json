@@ -1,0 +1,34 @@
+{
+  "name": "@you/node-bun-cli",
+  "version": "0.0.0",
+  "description": "CLI template — TypeScript on Node.js, npm-ready",
+  "license": "MIT",
+  "bin": {
+    "cli-name": "src/cli.ts"
+  },
+  "files": [
+    "src/cli.ts"
+  ],
+  "type": "module",
+  "scripts": {
+    "check": "vp fmt --check && vp lint && tsc --noEmit",
+    "check:fix": "vp fmt && vp lint --fix && tsc --noEmit",
+    "cli": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vite-plus": "^1.1.0"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
+    "vitest": "5.0.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

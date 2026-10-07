@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 // cli-name — one-line description of what it does.
 //
 // usage: cli-name <name> [count] [-u, --upper]
