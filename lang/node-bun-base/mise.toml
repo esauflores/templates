@@ -1,0 +1,12 @@
+[tools]
+node = "24"
+bun = "latest"
+
+[tasks.check]
+run = "bun run check"
+
+[tasks.check-fix]
+run = "bun run check:fix"
+
+[tasks.test]
+run = "bun run test"
