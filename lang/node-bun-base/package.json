@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/node.ts",
-    "start": "tsx src/node.ts",
     "check": "vp fmt --check && vp lint && tsc --noEmit",
     "check:fix": "vp fmt && vp lint --fix && tsc --noEmit",
     "test": "vp test",
-    "test:watch": "vp test --watch"
+    "test:watch": "vp test --watch",
+    "dev": "tsx watch src/node.ts",
+    "start": "tsx src/node.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3",

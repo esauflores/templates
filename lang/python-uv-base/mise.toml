@@ -5,12 +5,6 @@ uv = "latest"
 _.file = ".env"
 PORT = { default = "8000" }
 
-[tasks.dev]
-run = "uv run uvicorn app.main:app --reload --port $PORT"
-
-[tasks.start]
-run = "uv run uvicorn app.main:app --port $PORT"
-
 [tasks.check]
 run = ["uv run ruff check .", "uv run ruff format --check ."]
 
@@ -21,3 +15,12 @@ run = [
     "uv run ruff check .",
     "uv run ruff format --check .",
 ]
+
+[tasks.test]
+run = "uv run pytest"
+
+[tasks.dev]
+run = "uv run uvicorn app.main:app --reload --port $PORT"
+
+[tasks.start]
+run = "uv run uvicorn app.main:app --port $PORT"
