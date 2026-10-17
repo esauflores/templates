@@ -12,6 +12,7 @@ Backend and backend-adjacent starter templates.
 
 - [`ml/node-bun-inference/`](ml/node-bun-inference/) — Node.js/Hono CPU ONNX inference with Bun package management.
 - [`ml/python-uv-inference/`](ml/python-uv-inference/) — FastAPI CPU ONNX inference managed with uv.
+- [`ml/python-uv-training/`](ml/python-uv-training/) — PyTorch training experiments as numbered studies with shared data, evaluation and submission helpers, managed with uv.
 
 ## stack
 

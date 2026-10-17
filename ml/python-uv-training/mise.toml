@@ -1,0 +1,16 @@
+[tools]
+uv = "latest"
+
+[tasks.check]
+run = ["uv run ruff check .", "uv run ruff format --check ."]
+
+[tasks.check-fix]
+run = [
+    "uv run ruff check --fix .",
+    "uv run ruff format .",
+    "uv run ruff check .",
+    "uv run ruff format --check .",
+]
+
+[tasks.test]
+run = "uv run pytest"
