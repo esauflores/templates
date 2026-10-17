@@ -21,3 +21,18 @@ Copy the template closest to your project and adapt it. Code templates use
 mise for tools and tasks (`mise run check`, `test`, `dev`, `start`); see each
 template's `mise.toml` and `.env.example`. `stack/backend-base` has its own
 README.
+
+## Preferred stack
+
+Current defaults for new TypeScript backends:
+
+| Layer          | Choice                                                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Database       | [libSQL](https://github.com/tursodatabase/libsql) / [Turso](https://turso.tech) (SQLite-compatible; local file in development, Turso when hosted) |
+| ORM            | [Drizzle](https://orm.drizzle.team) (`drizzle-orm` + `@libsql/client`, migrations with `drizzle-kit`)                                    |
+| HTTP framework | [Hono](https://hono.dev)                                                                                                                |
+| Tooling        | [Vite+](https://viteplus.dev) (`vite-plus`: check, format, test)                                                                        |
+| TypeScript     | The exact [`tsconfig.json`](apps/node-bun-base/tsconfig.json) from `apps/node-bun-base`, unchanged                                       |
+
+`apps/node-bun-base` already uses Hono, Vite+ and this `tsconfig.json`; the
+database layer is not in the templates yet.
