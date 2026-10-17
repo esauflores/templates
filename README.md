@@ -26,13 +26,26 @@ README.
 
 Current defaults for new TypeScript backends:
 
-| Layer          | Choice                                                                                                                                  |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Database       | [libSQL](https://github.com/tursodatabase/libsql) / [Turso](https://turso.tech) (SQLite-compatible; local file in development, Turso when hosted) |
-| ORM            | [Drizzle](https://orm.drizzle.team) (`drizzle-orm` + `@libsql/client`, migrations with `drizzle-kit`)                                    |
-| HTTP framework | [Hono](https://hono.dev)                                                                                                                |
-| Tooling        | [Vite+](https://viteplus.dev) (`vite-plus`: check, format, test)                                                                        |
-| TypeScript     | The exact [`tsconfig.json`](apps/node-bun-base/tsconfig.json) from `apps/node-bun-base`, unchanged                                       |
+| Layer           | Choice                                                                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Database        | [libSQL](https://github.com/tursodatabase/libsql) (SQLite-compatible; self-hosted, not Turso Cloud)                                     |
+| ORM             | [Drizzle](https://orm.drizzle.team) (`drizzle-orm` + `@libsql/client`, migrations with `drizzle-kit`)                                   |
+| HTTP framework  | [Hono](https://hono.dev)                                                                                                                |
+| Package manager | [Bun](https://bun.sh) (`bun install`, `bun run <script>`, `bun.lock`); code runs on Node.js 24 via `tsx`; both installed by `mise.toml` |
+| Tooling         | [Vite+](https://viteplus.dev) (`vite-plus`: check, format, test)                                                                        |
+| TypeScript      | The exact [`tsconfig.json`](apps/node-bun-base/tsconfig.json) from `apps/node-bun-base`, unchanged                                      |
+| Scripts         | The exact `scripts` from [`package.json`](apps/node-bun-base/package.json) in `apps/node-bun-base` (below)                              |
 
-`apps/node-bun-base` already uses Hono, Vite+ and this `tsconfig.json`; the
-database layer is not in the templates yet.
+```json
+"scripts": {
+  "check": "vp fmt --check && vp lint && tsc --noEmit",
+  "check:fix": "vp fmt && vp lint --fix && tsc --noEmit",
+  "test": "vp test",
+  "test:watch": "vp test --watch",
+  "dev": "tsx watch src/node.ts",
+  "start": "tsx src/node.ts"
+}
+```
+
+`apps/node-bun-base` already uses Hono, Vite+, this `tsconfig.json` and these
+scripts; the database layer is not in the templates yet.
