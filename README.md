@@ -6,6 +6,7 @@ Backend and backend-adjacent starter templates.
 
 - [`apps/node-bun-cli/`](apps/node-bun-cli/) — TypeScript CLI package for Node.js, with Bun as its package manager.
 - [`apps/node-bun-base/`](apps/node-bun-base/) — Hono API starter running on Node.js, with Bun as its package manager.
+- [`apps/bun-fullstack-base/`](apps/bun-fullstack-base/) — Hono API with Zod OpenAPI (`apps/api`), React (Tailwind, shadcn) web app (`apps/web`) and the server that runs them (`server/`) as Bun workspaces: one `Bun.serve` process routing `/api` to the API and everything else to the web app's `index.html`, which Bun bundles itself (hot reload in dev, built ahead of time for production). Vite+ only checks and tests.
 - [`apps/python-uv-base/`](apps/python-uv-base/) — FastAPI and Pydantic application managed with uv.
 
 ## ml
@@ -20,8 +21,9 @@ Backend and backend-adjacent starter templates.
 
 Copy the template closest to your project and adapt it. Code templates use
 mise for tools and tasks (`mise run check`, `test`, `dev`, `start`); see each
-template's `mise.toml` and `.env.example`. `stack/backend-base` has its own
-README.
+template's `mise.toml` and `.env.example`. `apps/bun-fullstack-base` skips mise
+(just Bun and `bun run` scripts), and it and `stack/backend-base` have their own
+READMEs.
 
 ## Preferred stack
 

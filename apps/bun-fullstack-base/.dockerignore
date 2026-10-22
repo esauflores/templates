@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/tests
+.vitest
+coverage
+*.log
+.env
+.env.*
+.git
+.agents
+*.md
+Dockerfile
+.dockerignore
+vite.config.ts

@@ -1,0 +1,29 @@
+{
+  "name": "bun-fullstack-base",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "server"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --cwd server dev",
+    "build": "bun run --cwd server build",
+    "start": "bun run --cwd server start",
+    "check": "vp check",
+    "check:fix": "vp check --fix",
+    "test": "vp test",
+    "test:watch": "vp test watch"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.3",
+    "@vitest/browser-playwright": "5.0.5",
+    "playwright": "1.64.1",
+    "vite-plus": "1.3.0"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.3.0"
+  },
+  "packageManager": "bun@1.4.3"
+}
