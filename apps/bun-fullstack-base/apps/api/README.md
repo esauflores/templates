@@ -77,7 +77,8 @@ export const booksRoutes = createRouter()
 
 - Clients are told apart by IP (`clientIp` in `core/rate-limit.ts`). Behind a reverse proxy, set `TRUST_PROXY=true`
   (the Docker image does) so it reads the client's IP from `X-Forwarded-For`; without it every request looks like
-  the proxy's and all clients share one limit. Never set it without a proxy: clients can send that header.
+  the proxy's and all clients share one limit. Never set it without a proxy: clients can send that header. Any value
+  but `true` or `false` fails at start, so a typo can't turn it off silently.
 - The counts live in the process's memory, so they reset on restart and each instance counts on its own. With
   several instances, pass a shared `store` (`RedisStore` from
   [hono-rate-limiter](https://github.com/rhinobase/hono-rate-limiter), on Valkey or Redis).

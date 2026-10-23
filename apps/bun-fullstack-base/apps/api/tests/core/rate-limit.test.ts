@@ -26,6 +26,12 @@ describe("rateLimit", () => {
     expect(Number(response.headers.get("Retry-After"))).toBeGreaterThan(0);
   });
 
+  it("fails at start when TRUST_PROXY is neither true nor false", () => {
+    vi.stubEnv("TRUST_PROXY", "ture");
+
+    expect(() => rateLimit({ limit: 2, windowMs: 60_000 })).toThrow('TRUST_PROXY must be "true" or "false"');
+  });
+
   it("counts each client on its own", async () => {
     const app = limited();
     await app.request("/", {}, connectionFrom("203.0.113.1"));

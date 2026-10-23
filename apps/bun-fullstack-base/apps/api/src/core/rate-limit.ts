@@ -15,10 +15,22 @@ interface BunServerEnv {
 }
 
 /**
+ * Fails at start when `TRUST_PROXY` is set to anything but `true` or `false`: a typo would otherwise turn it off
+ * silently, and behind a proxy every client would share one limit.
+ */
+function checkTrustProxy() {
+  const value = process.env.TRUST_PROXY;
+  if (value && value !== "true" && value !== "false") {
+    throw new Error(`TRUST_PROXY must be "true" or "false", got "${value}"`);
+  }
+}
+
+/**
  * A rate limit per client IP: past it, `429 { error }` with `Retry-After`. Each call keeps its own counts, in memory;
  * with several instances, pass a shared `store` (hono-rate-limiter's `RedisStore`).
  */
 export function rateLimit({ limit, windowMs, skip, store }: RateLimitOptions): MiddlewareHandler {
+  checkTrustProxy();
   return rateLimiter({
     limit,
     windowMs,

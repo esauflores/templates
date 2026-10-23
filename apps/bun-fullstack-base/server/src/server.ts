@@ -39,9 +39,15 @@ const server = Bun.serve({
 
 /**
  * Docker's stop (SIGTERM) and Ctrl-C (SIGINT): stop taking connections, let requests in flight finish, then exit.
+ * A request that never finishes can't hold the container past the grace period (Docker's own is 10 s).
  * Registered once, as `bun --hot` reruns this file on every change but keeps the process.
  */
-const shutdown = () => server.stop().then(() => process.exit(0));
+const SHUTDOWN_GRACE_MS = 5_000;
+const shutdown = () => {
+  setTimeout(() => process.exit(0), SHUTDOWN_GRACE_MS).unref();
+  return server.stop().then(() => process.exit(0));
+};
+
 const processState = globalThis as { started?: boolean };
 if (!processState.started) {
   processState.started = true;
