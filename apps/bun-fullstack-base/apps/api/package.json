@@ -7,10 +7,18 @@
     ".": "./src/app.ts",
     "./client": "./src/client.ts"
   },
+  "scripts": {
+    "db:generate": "drizzle-kit generate"
+  },
   "dependencies": {
     "@hono/zod-openapi": "^1.6.3",
+    "@tursodatabase/database": "^0.8.3",
+    "drizzle-orm": "^1.0.0-rc.5",
     "hono": "^4.13.13",
     "hono-rate-limiter": "^0.5.4",
     "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^1.0.0-rc.5"
   }
 }

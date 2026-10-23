@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { clientIp, rateLimit } from "@api/core/rate-limit.ts";
+import { apiRateLimit, clientIp, rateLimit } from "@api/core/rate-limit.ts";
 
 /** The env a Bun server passes with each request, with the connection's address. */
 const connectionFrom = (address: string) => ({ requestIP: () => ({ address }) });
@@ -38,6 +38,21 @@ describe("rateLimit", () => {
     await app.request("/", {}, connectionFrom("203.0.113.1"));
 
     expect((await app.request("/", {}, connectionFrom("203.0.113.2"))).status).toBe(200);
+  });
+});
+
+describe("apiRateLimit", () => {
+  it("is 300 when RATE_LIMIT is unset, and RATE_LIMIT otherwise", () => {
+    expect(apiRateLimit()).toBe(300);
+
+    vi.stubEnv("RATE_LIMIT", "0");
+    expect(apiRateLimit()).toBe(0);
+  });
+
+  it("fails at start when RATE_LIMIT isn't a whole number", () => {
+    vi.stubEnv("RATE_LIMIT", "off");
+
+    expect(() => apiRateLimit()).toThrow('RATE_LIMIT must be a whole number of requests a minute, got "off"');
   });
 });
 

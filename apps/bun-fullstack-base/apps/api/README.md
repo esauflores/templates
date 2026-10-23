@@ -1,14 +1,16 @@
 # api
 
 The Hono API, everything under `/api`, served by `server/` on the web app's origin (so no CORS).
-It's organized by feature: each **module** owns its routes, schemas and logic, and `app.ts` only wires modules
-together. `modules/hello/` is the working example to copy.
+It's organized by feature: each **module** owns its routes, schemas, logic and tables, and `app.ts` only wires
+modules together. `modules/hello/` is the working example to copy, `modules/notes/` the one with a table.
 
 | Endpoint                | What it answers                                                          |
 | ----------------------- | ------------------------------------------------------------------------ |
 | `GET /api/health`       | `{ ok: true }`, for uptime checks                                        |
 | `GET /api/openapi.json` | The OpenAPI 3.1 document, built from the modules (`/health` isn't in it) |
 | `GET /api/hello/{name}` | `{ message }`: the example module                                        |
+| `GET /api/notes`        | `{ notes, next }`: a page, newest first (`?limit=20&before=<next>`)      |
+| `POST /api/notes`       | `{ text }` saves a note and answers it, `201`                            |
 
 ## Layout
 
@@ -18,6 +20,7 @@ src/
 │                    then each module's router; exports AppType
 ├── client.ts        what the web app imports (api/client): Hono's typed client and AppType
 ├── core/            shared by every module, knows no feature
+│   ├── db.ts        db: the database (Turso, through Drizzle), migrated at start
 │   ├── errors.ts    notFound, onError: every error answers { error }
 │   ├── openapi.ts   createRouter(), ErrorSchema
 │   └── rate-limit.ts  rateLimit(): requests per client IP, 429 { error } past the limit
@@ -25,7 +28,10 @@ src/
     └── <module>/
         ├── <module>.routes.ts    HTTP only: route definitions and thin handlers
         ├── <module>.schemas.ts   Zod schemas: what goes in and out
-        └── <module>.service.ts   the logic: plain functions, no Hono, no Context
+        ├── <module>.service.ts   the logic: plain functions, no Hono, no Context
+        └── <module>.table.ts     its tables, when it has any (Drizzle)
+drizzle/             the migrations, generated from the tables (bun run db:generate)
+drizzle.config.ts    where drizzle-kit finds the tables (modules/*/*.table.ts) and writes the migrations
 tests/
 ├── app.test.ts                  what crosses modules: 404s, the OpenAPI document
 ├── core/                        mirroring src/core/
@@ -48,8 +54,9 @@ tests/
 1. The server (`server/src/server.ts`) sends `/api` and `/api/*` to `createApp().fetch`. The app's base path is
    `/api`, so routes are written without it (`/hello/{name}` answers `/api/hello/{name}`).
 2. The request is logged (Hono's `logger()`: `<-- GET /api/hello/world`, then `--> GET /api/hello/world 200 3ms`;
-   not `/api/health`; tests show them only when one fails). Then `secureHeaders()` and the rate limit (see below)
-   run, then the module route.
+   not `/api/health`; tests show them only when one fails). Then `secureHeaders()`, the rate limit (see below) and
+   the body limit run, then the module route. A body over 1 MB answers `413 { error }` (`MAX_BODY_BYTES` in
+   `app.ts`; raise it for uploads, or give one route a `bodyLimit` of its own).
 3. Zod checks params, query and body against the route's schemas. Invalid input answers `400 { error }`
    with Zod's readable message; the handler doesn't run.
 4. Errors end in `core/errors.ts`: an `HTTPException` below 500 answers `{ error: message }` (or the response a
@@ -60,9 +67,34 @@ tests/
 Every error body the API builds is `{ error: string }` (`ErrorSchema`), which the web app reads into `ApiError`.
 A response a middleware built (like `basicAuth`'s 401) passes through as is; `ApiError` then carries its status text.
 
+## Database
+
+[Turso](https://github.com/tursodatabase/turso), SQLite rewritten in Rust, runs in the API's process on one file,
+with [Drizzle](https://orm.drizzle.team) for typed queries (`drizzle-orm/tursodatabase/database`).
+
+- **Tables** belong to their module, in `<module>.table.ts`; only that module's service queries them. Another
+  module asks through the service, as with everything else.
+- **Prepared queries** for the ones that run on most requests: built once at the top of the service with
+  `sql.placeholder(…)` for the values and `.prepare()`, so the database parses and plans them once, not per request
+  (`notes.service.ts`: about twice the requests a second). Only the values can change between calls, and a column's
+  `$defaultFn` runs once, when preparing: pass such values (like `createdAt`) as placeholders. Rare or
+  variable-shape queries stay plain Drizzle chains.
+- **Migrations**: after changing a table, `bun run db:generate` writes the SQL into `drizzle/`; commit it. The
+  server applies the ones not yet applied when it starts (`core/db.ts`), in dev and in production, so there's no
+  separate step. A migration is never edited once it's run somewhere: change the table and generate another.
+- **The file** is `DATABASE_PATH`: `data/app.db` at the repo root in dev, from `.env.example`. Without it,
+  `/data/app.db`, the Docker image's volume.
+- **Tests** run on `:memory:` (`vite.config.ts`), a fresh database per test file, migrated like the real one.
+- **One instance.** The file is the API's own: run one server per database. Back it up by copying the file and its
+  `-wal` while the server is stopped.
+
+Drizzle 1.0 is still a release candidate (its Turso driver is new in 1.0), taken as `^1.0.0-rc.5`; Turso's
+JavaScript package is 0.x. Read the changelogs before updating either.
+
 ## Rate limits
 
-Every client gets 300 requests a minute across `/api` (`/api/health` isn't counted), set in `app.ts`. Past it, a
+Every client gets 300 requests a minute across `/api` (`/api/health` isn't counted), or `RATE_LIMIT` in `.env`; `0`
+turns the limit off (for a benchmark, say, where every request comes from one client). Past it, a
 request answers `429 { error }` with `Retry-After`, and the web app shows that message (its query client doesn't
 retry a 4xx). Every answer carries `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset`.
 
@@ -93,26 +125,42 @@ Say, `books`:
    ```ts
    import { z } from "@hono/zod-openapi";
 
-   export const BookSchema = z.object({ id: z.string(), title: z.string() }).openapi("Book");
+   export const BookSchema = z.object({ id: z.number().int(), title: z.string() }).openapi("Book");
 
    export const BookParamsSchema = z.object({
-     id: z.string().openapi({ param: { name: "id", in: "path" } }),
+     id: z.coerce
+       .number()
+       .int()
+       .openapi({ param: { name: "id", in: "path" } }),
    });
    ```
 
 2. `modules/books/books.service.ts`: the logic.
 
    ```ts
+   import { eq } from "drizzle-orm";
    import { HTTPException } from "hono/http-exception";
 
-   /** A stand-in for a database. */
-   const books = new Map([["1", { id: "1", title: "Dune" }]]);
+   import { db } from "@api/core/db.ts";
 
-   export function findBook(id: string) {
-     const book = books.get(id);
+   import { books } from "./books.table.ts";
+
+   export async function findBook(id: number) {
+     const [book] = await db.select().from(books).where(eq(books.id, id));
      if (!book) throw new HTTPException(404, { message: "No such book" });
      return book;
    }
+   ```
+
+   Its table, in `modules/books/books.table.ts`, then `bun run db:generate` for the migration:
+
+   ```ts
+   import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
+   export const books = sqliteTable("books", {
+     id: integer().primaryKey({ autoIncrement: true }),
+     title: text().notNull(),
+   });
    ```
 
 3. `modules/books/books.routes.ts`: the HTTP side, with [Zod OpenAPI](https://hono.dev/examples/zod-openapi).
@@ -141,7 +189,9 @@ Say, `books`:
      },
    });
 
-   export const booksRoutes = createRouter().openapi(getBook, (c) => c.json(findBook(c.req.valid("param").id), 200));
+   export const booksRoutes = createRouter().openapi(getBook, async (c) =>
+     c.json(await findBook(c.req.valid("param").id), 200),
+   );
    ```
 
    Use `createRouter()`, not `new OpenAPIHono()` or `new Hono()`: a bare `OpenAPIHono` answers invalid input with

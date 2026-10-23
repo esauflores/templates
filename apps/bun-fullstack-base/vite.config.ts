@@ -8,8 +8,8 @@ const path = (relative: string) => fileURLToPath(new URL(relative, import.meta.u
  * Vite+ checks and tests the code: `vp check` formats, lints and type-checks server/, apps/api and apps/web, each with
  * its tsconfig.json (all extend the root's; web swaps Bun's types for DOM and JSX). `vp test` runs the server
  * tests (a production bundle of the page, on Bun), the api tests (no DOM) and the web tests (headless Chromium,
- * through Playwright). Serving and bundling the web app is Bun's job, not Vite's (server/, with Tailwind as a Bun
- * plugin, see its bunfig.toml).
+ * through Playwright), each test file on a database of its own, in memory. Serving and bundling the web app is Bun's
+ * job, not Vite's (server/, with Tailwind as a Bun plugin, see its bunfig.toml).
  */
 export default defineConfig({
   resolve: {
@@ -19,6 +19,7 @@ export default defineConfig({
     },
   },
   test: {
+    env: { DATABASE_PATH: ":memory:" },
     projects: [
       {
         extends: true,

@@ -26,6 +26,16 @@ function checkTrustProxy() {
 }
 
 /**
+ * The API's own limit, from `RATE_LIMIT`: requests a minute per client, 300 when unset, 0 for none (as when
+ * benchmarking, where every request comes from one client). Anything else fails at start.
+ */
+export function apiRateLimit(): number {
+  const value = process.env.RATE_LIMIT || "300";
+  if (!/^\d+$/.test(value)) throw new Error(`RATE_LIMIT must be a whole number of requests a minute, got "${value}"`);
+  return Number(value);
+}
+
+/**
  * A rate limit per client IP: past it, `429 { error }` with `Retry-After`. Each call keeps its own counts, in memory;
  * with several instances, pass a shared `store` (hono-rate-limiter's `RedisStore`).
  */

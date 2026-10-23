@@ -25,6 +25,7 @@ const STACK = [
 /** The API's endpoints, for "Endpoints". */
 const ENDPOINTS = [
   { path: "/api/hello/{name}", href: "/api/hello/world", description: "Greeting for a name. Validated by Zod." },
+  { path: "/api/notes", href: "/api/notes", description: "Notes from the database, a page at a time. POST adds one." },
   { path: "/api/health", href: "/api/health", description: "Liveness check used by the status pill." },
   {
     path: "/api/openapi.json",

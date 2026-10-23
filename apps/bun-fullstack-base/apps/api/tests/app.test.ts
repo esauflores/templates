@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { createApp } from "@api/app.ts";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("app", () => {
   it("answers the health check, with security headers", async () => {
@@ -24,6 +28,29 @@ describe("app", () => {
 
     expect((await app.request("/api/hello/world")).headers.get("RateLimit-Limit")).toBe("300");
     expect((await app.request("/api/health")).headers.get("RateLimit-Limit")).toBeNull();
+  });
+
+  it("has no rate limit with RATE_LIMIT=0", async () => {
+    vi.stubEnv("RATE_LIMIT", "0");
+
+    expect((await createApp().request("/api/hello/world")).headers.get("RateLimit-Limit")).toBeNull();
+  });
+
+  it("refuses a body over 1 MB with 413 { error }, declared or chunked", async () => {
+    const big = "x".repeat(1024 * 1024 + 1);
+    const chunked = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(big));
+        controller.close();
+      },
+    });
+
+    const declared = { headers: { "content-length": String(big.length) }, body: big };
+    for (const init of [declared, { body: chunked, duplex: "half" }]) {
+      const response = await createApp().request("/api/notes", { method: "POST", ...init } as RequestInit);
+      expect(response.status).toBe(413);
+      expect(await response.json()).toEqual({ error: "The request body is over 1 MB" });
+    }
   });
 
   it("answers JSON for an unmatched route", async () => {

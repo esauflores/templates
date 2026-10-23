@@ -8,6 +8,7 @@ validate requests, make up its OpenAPI document and type the web app's client, s
 | ------- | ----------------------------------------------------------------------------------------------------- |
 | Server  | [Bun](https://bun.com) 1.4: `Bun.serve` runs the API and serves the web app, which Bun bundles        |
 | API     | [Hono](https://hono.dev) with [Zod OpenAPI](https://hono.dev/examples/zod-openapi), by feature module |
+| DB      | [Turso](https://github.com/tursodatabase/turso) (SQLite in Rust) in the process, through Drizzle      |
 | Web     | React 19, React Router, TanStack Query, Tailwind CSS 4, shadcn/ui                                     |
 | Tooling | [Vite+](https://viteplus.dev) (`vp`): format, lint, type-check, and tests (web in headless Chromium)  |
 
@@ -23,16 +24,17 @@ bunx playwright install chromium   # once, for the web tests
 bun run dev                        # http://localhost:3000
 ```
 
-| Script          | What it does                                                                            |
-| --------------- | --------------------------------------------------------------------------------------- |
-| `bun run dev`   | Serve with hot reload: the page on web changes, the API on api changes                  |
-| `bun run build` | Bundle the server, the API and the page, minified, into `server/dist/`                  |
-| `bun run start` | Serve that build in production mode (run `build` first)                                 |
-| `bun run check` | Format check, lint and type-check everything (`check:fix` fixes what it can)            |
-| `bun run test`  | API, web (headless Chromium) and production build tests (`test:watch` reruns on change) |
+| Script                | What it does                                                                            |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `bun run dev`         | Serve with hot reload: the page on web changes, the API on api changes                  |
+| `bun run build`       | Bundle the server, the API and the page, minified, into `server/dist/`                  |
+| `bun run start`       | Serve that build in production mode (run `build` first)                                 |
+| `bun run check`       | Format check, lint and type-check everything (`check:fix` fixes what it can)            |
+| `bun run test`        | API, web (headless Chromium) and production build tests (`test:watch` reruns on change) |
+| `bun run db:generate` | Write a migration for the tables changed since the last one (the server applies it)     |
 
-Run every script from the root. `.env` lives at the root too (just `PORT` for now); `dev` and `start` load it. A
-`PORT` already set in your shell wins over `.env`.
+Run every script from the root. `.env` lives at the root too; `dev` and `start` load it. A variable already set in
+your shell wins over `.env`. The database is `data/app.db` (`DATABASE_PATH` in `.env`), created on the first start.
 
 ## How it fits together
 
@@ -79,7 +81,7 @@ tests).
 ```
 server/           Bun.serve (/api to the API, the rest to the web app), build.ts             → server/README.md
 apps/
-├── api/          the Hono API: core/ (errors, OpenAPI router) and modules/                  → apps/api/README.md
+├── api/          the Hono API: core/ (database, errors, OpenAPI router), modules/, drizzle/  → apps/api/README.md
 └── web/          the React app: lib/api.ts (the typed client), pages/                      → apps/web/README.md
 .agents/skills/   Agent Skills for adding API modules, endpoints and API calls
 bunfig.toml       package binaries (vp) run on Bun
@@ -93,12 +95,15 @@ Dockerfile        the production image
 
 ```sh
 docker build -t bun-fullstack-base .
-docker run --rm -p 3000:3000 bun-fullstack-base   # pass settings with -e PORT=… or --env-file .env
+docker run --rm -p 3000:3000 -v app-data:/data bun-fullstack-base   # settings with -e PORT=… or --env-file .env
 ```
 
-The image (on `oven/bun:1.4.3`, the Bun that `packageManager` pins) is built in two stages. The first installs the
-dependencies and runs `bun run build` on Debian slim; the second keeps only `server/dist/` (a few MB, no
-`node_modules`) and runs it on Alpine as the `bun` user, about 150 MB in all. Checks and tests run outside it. Its
+The image (on `oven/bun:1.4.3`, the Bun that `packageManager` pins) is built in two stages on Debian slim. The first
+installs the dependencies and runs `bun run build`; the second keeps only `server/dist/` (a few MB, with the
+migrations and Turso's native addon, no `node_modules`) and runs it as the `bun` user, about 290 MB in all. It isn't
+on Alpine, which would save about 110 MB, because Turso has no build for musl. The database lives in the `/data`
+volume: mount one there, or it's lost with the container. The addon is for the CPU the image is built for, so build
+it for the one it runs on (`docker build --platform`). Checks and tests run outside it. Its
 `HEALTHCHECK` calls `/api/health` every 30 s, so Docker can tell when the server stops answering.
 
 Don't expose the image on its own: put a reverse proxy (Caddy, nginx, your platform's) in front. It terminates TLS,

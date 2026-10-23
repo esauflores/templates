@@ -2,6 +2,9 @@ node_modules/
 .vitest/
 coverage/
 dist/
+data/*
+!data/.gitkeep
+server/data/
 *.log
 
 .env
