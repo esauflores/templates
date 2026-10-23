@@ -46,7 +46,8 @@ Docker image runs the same `dist/`, with settings from `docker run -e` or `--env
 
 ## Benchmark
 
-The production build (`dist/`) on the template's own page and API.
+The production build (`dist/`) on the template's own page and API, measured with `bun run bench` (see
+[`bench/`](../bench/README.md)).
 
 Setup: Bun 1.4.3 on an Intel i5-1135G7 (Linux, plugged in, performance power profile), the server pinned to one core
 (`taskset -c 1`), the load from [oha](https://github.com/hatoo/oha) on four others, 100 connections, 5 s per target,
@@ -54,23 +55,23 @@ sending a browser's `Accept-Encoding`. Medians of 3 rounds, with the range in br
 limit (`RATE_LIMIT=0`), as all the load comes from one client, where real traffic comes from many, each round on a
 fresh database of 50 notes.
 
-|                                 | Built (`dist/`)                     |
-| ------------------------------- | ----------------------------------- |
-| Ready to answer                 | 60 ms [58–61]                       |
-| First page request              | 0.2 ms                              |
-| Memory, started / loaded        | 55 / 78 MB RSS, own 17 / 35 MB      |
-| `/` (index.html)                | 268k req/s [266–277k], p99 0.8 ms   |
-| JS bundle (105 KB gzipped)      | 74k req/s [71–74k], p99 2.7 ms      |
-| `/api/hello/{name}`             | 60k req/s [60–61k], p99 4.2 ms      |
-| `GET /api/notes` (a page of 20) | 22k req/s [21.6–22.2k], p99 11 ms   |
-| `POST /api/notes`               | 8.6k req/s [7.3–8.6k], p99 25 ms    |
-| `PATCH /api/notes/{id}`         | 12.3k req/s [12.3–12.4k], p99 17 ms |
+|                                 | Built (`dist/`)                       |
+| ------------------------------- | ------------------------------------- |
+| Ready to answer                 | 64 ms [59–91], each on a new database |
+| First page request              | 0.2 ms                                |
+| Memory, started / loaded        | 55 / 78 MB RSS, own 17 / 35 MB        |
+| `/` (index.html)                | 269k req/s [232–270k], p99 0.8 ms     |
+| JS bundle (105 KB gzipped)      | 70k req/s [69–71k], p99 3.0 ms        |
+| `/api/hello/{name}`             | 56k req/s [55–64k], p99 4.9 ms        |
+| `GET /api/notes` (a page of 20) | 21k req/s [19.6–21k], p99 12 ms       |
+| `POST /api/notes`               | 10.3k req/s [10.2–10.5k], p99 19 ms   |
+| `PATCH /api/notes/{id}`         | 12.0k req/s [11.9–12.1k], p99 18 ms   |
 
 - The page is bundled ahead of time, so the first request is answered at once, from memory: the bundler and
   Tailwind aren't loaded at runtime.
 - Most of the memory is Bun's own executable (27 MB of it in memory) and Turso's addon (10 MB of its 19 MB), mapped
-  from disk: shared between instances, and given back to the kernel when it needs it (`docker stats` leaves it out). The server's own memory is 17 MB
-  idle (Hono, Zod, the OpenAPI schemas, the page's files, the database's engine) and 35 MB under load (connection
+  from disk: shared between instances, and given back to the kernel when it needs it (`docker stats` leaves it out).
+  The server's own memory is 17 MB idle (Hono, Zod, the OpenAPI schemas, the page's files, the database's engine) and 35 MB under load (connection
   buffers, compiled code). Bun's `--smol` and smaller GC settings didn't lower it.
 - The database added about 22 ms to the start (opening it and checking the migrations; 70 ms on the very first,
   which creates the tables) and about 20 MB idle, measured the same way against the build before it: 10 MB is
@@ -86,8 +87,8 @@ fresh database of 50 notes.
 - The insert and the update are prepared once too: the insert went from 4.7k to 7.0k notes a second (6 rounds each,
   alternating, no rate limit). Writes vary more between rounds than reads. The update (always note 25 here) rewrites
   one row, while the insert adds one.
-- Writing grows the server's memory: after 24k notes in 5 s it was 138 MB RSS, 94 MB its own (78 / 35 MB after the
-  API's reads). Not looked into further.
+- Memory after writing: one run reached 138 MB RSS, 94 MB its own, after 24k notes in 5 s; later runs, after about
+  37k, stayed at 73–82 MB. Not looked into further.
 - The request logger is the API's biggest cost after the database: about half of `/api/hello`'s time in the process.
   Writing one line per request once answered (`core/logger.ts`), instead of Hono's `logger()` in an `except()` (two
   lines), took `/api/hello` from 49k to 61k req/s, `GET /api/notes` from 19k to 22k and `POST` from 7.5k to 8.5k (6
@@ -99,8 +100,5 @@ fresh database of 50 notes.
   read 1.9 times and write 1.3 times as much, measured, but it isn't on here.)
 - On a power-saving profile the core runs at about a third of its clock and every number drops by half or more.
 
-To rerun it: `bun run build`, then from `server/dist/`,
-`PORT=3130 RATE_LIMIT=0 taskset -c 1 bun server/src/server.js`, and
-`oha -z 5s -c 100 -H "Accept-Encoding: gzip" http://127.0.0.1:3130/` (and the JS's `/chunk-….js`, and
-`/api/hello/bench`, and `/api/notes`, a `POST /api/notes` and a `PATCH /api/notes/25` on a fresh database of 50
-notes). Numbers vary between machines.
+To rerun it, `bun run bench` (needs oha): it builds, then prints the table's rows. Numbers vary between machines.
+First page request and memory are measured by hand.

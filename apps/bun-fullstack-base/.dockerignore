@@ -2,6 +2,7 @@
 **/dist
 data
 **/tests
+bench
 .vitest
 coverage
 *.log

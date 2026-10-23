@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "server"
+    "server",
+    "bench"
   ],
   "type": "module",
   "scripts": {
@@ -12,6 +13,7 @@
     "build": "bun run --cwd server build",
     "start": "bun run --cwd server start",
     "db:generate": "bun run --cwd apps/api db:generate",
+    "bench": "bun run --cwd bench all",
     "check": "vp check",
     "check:fix": "vp check --fix",
     "test": "vp test",

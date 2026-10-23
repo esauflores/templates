@@ -1,0 +1,13 @@
+{
+  "name": "bench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "all": "bun run --cwd ../server build && bun http.ts && cd .. && vp test bench --run --reporter=verbose"
+  },
+  "dependencies": {
+    "api": "workspace:*",
+    "drizzle-orm": "^1.0.0-rc.5"
+  }
+}

@@ -32,6 +32,7 @@ bun run dev                        # http://localhost:3000
 | `bun run check`       | Format check, lint and type-check everything (`check:fix` fixes what it can)            |
 | `bun run test`        | API, web (headless Chromium) and production build tests (`test:watch` reruns on change) |
 | `bun run db:generate` | Write a migration for the tables changed since the last one (the server applies it)     |
+| `bun run bench`       | Benchmark the built server over HTTP (oha) and the API in the process (`bench/`)        |
 
 Run every script from the root. `.env` lives at the root too; `dev` and `start` load it. A variable already set in
 your shell wins over `.env`. The database is `data/app.db` (`DATABASE_PATH` in `.env`), created on the first start.
@@ -83,6 +84,7 @@ server/           Bun.serve (/api to the API, the rest to the web app), build.ts
 apps/
 ├── api/          the Hono API: core/ (database, errors, OpenAPI router), modules/, drizzle/  → apps/api/README.md
 └── web/          the React app: lib/api.ts (the typed client), pages/                      → apps/web/README.md
+bench/            benchmarks, run locally: HTTP with oha, the API in the process             → bench/README.md
 .agents/skills/   Agent Skills for adding API modules, endpoints and API calls
 bunfig.toml       package binaries (vp) run on Bun
 tsconfig.json     the shared TypeScript settings and import paths, extended by server/ and each app
