@@ -110,8 +110,9 @@ stage goes back to `-slim`. The database lives in the `/data` volume: mount one 
 A named volume (`-v app-data:/data`) is copied from the image, so the `bun` user owns it and can write; a bind mount
 (`-v $PWD/data:/data`) keeps the host directory's owner, and if that isn't uid 1000 the server exits at start with
 `SQLiteError: unable to open database file` — `sudo chown -R 1000:1000 data` first, or run it with
-`--user "$(id -u):$(id -g)"`. Checks and tests run outside it. Its `HEALTHCHECK` calls `/api/health` every 30 s, so
-Docker can tell when the server stops answering.
+`--user "$(id -u):$(id -g)"`. Checks and tests run outside it. Its `HEALTHCHECK` calls `/api/health` every 30 s,
+which reads the database too (a `SELECT 1`), so Docker marks it unhealthy when the file stops answering, not only when
+the process does.
 
 Don't expose the image on its own: put a reverse proxy (Caddy, nginx, your platform's) in front. It terminates TLS,
 compresses the API's responses (the page's files come compressed already), and sets security headers on the page

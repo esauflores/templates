@@ -1,4 +1,4 @@
-import { createApp } from "api";
+import { createApp, trustProxy } from "api";
 import index from "web/index.html";
 
 import { pageRoutes } from "./page.ts";
@@ -49,4 +49,6 @@ if (!processState.started) {
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
   console.log(`Listening on ${server.url.href}`);
+  const per = trustProxy() ? "the X-Forwarded-For header (TRUST_PROXY=true)" : "the connection's address";
+  console.log(`Client IP: ${per}`);
 }

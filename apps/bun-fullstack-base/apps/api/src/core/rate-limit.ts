@@ -52,11 +52,22 @@ export function rateLimit({ limit, windowMs, skip, store }: RateLimitOptions): M
 }
 
 /**
+ * Whether the client's IP is the one a proxy put in X-Forwarded-For (`TRUST_PROXY=true`, the image's default), or the
+ * connection's. server.ts prints which at start, so a wrong one is visible instead of guessed at: trusted with no
+ * proxy, every request looks like a new client, and limits stop counting; untrusted behind a proxy, every request
+ * looks like the proxy, and one client's traffic uses up everyone's.
+ */
+export function trustProxy(): boolean {
+  checkTrustProxy();
+  return process.env.TRUST_PROXY === "true";
+}
+
+/**
  * The client's IP. Behind a proxy (`TRUST_PROXY=true`), the last `X-Forwarded-For` address, the one the proxy added;
  * otherwise the connection's. "unknown" without either, as in tests.
  */
 export function clientIp(c: Context): string {
-  const forwarded = process.env.TRUST_PROXY === "true" && c.req.header("x-forwarded-for")?.split(",").at(-1)?.trim();
+  const forwarded = trustProxy() && c.req.header("x-forwarded-for")?.split(",").at(-1)?.trim();
   if (forwarded) return forwarded;
   const server = c.env as BunServerEnv | undefined;
   return server?.requestIP?.(c.req.raw)?.address ?? "unknown";

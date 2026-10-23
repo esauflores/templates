@@ -49,8 +49,27 @@ describe("app", () => {
     for (const init of [declared, { body: chunked, duplex: "half" }]) {
       const response = await createApp().request("/api/notes", { method: "POST", ...init } as RequestInit);
       expect(response.status).toBe(413);
-      expect(await response.json()).toEqual({ error: "The request body is over 1 MB" });
+      expect(await response.json()).toEqual({ error: `The request body is over ${1024 * 1024} bytes` });
     }
+  });
+
+  it("takes the body limit from MAX_BODY_BYTES", async () => {
+    vi.stubEnv("MAX_BODY_BYTES", "16");
+
+    const response = await createApp().request("/api/notes", {
+      method: "POST",
+      headers: { "content-type": "application/json", "content-length": "20" },
+      body: JSON.stringify({ text: "too long" }),
+    });
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ error: "The request body is over 16 bytes" });
+  });
+
+  it("fails at start when MAX_BODY_BYTES isn't a number of bytes", () => {
+    vi.stubEnv("MAX_BODY_BYTES", "1mb");
+
+    expect(() => createApp()).toThrow(/MAX_BODY_BYTES must be a whole number of bytes/);
   });
 
   it("answers JSON for an unmatched route", async () => {

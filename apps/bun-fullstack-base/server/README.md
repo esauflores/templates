@@ -37,8 +37,8 @@ tests/
     (`/robots.txt`), with `no-cache` as its names aren't hashed.
   - One fixed response per file keeps Bun's fast path for static responses: no code runs per request.
 
-Request bodies are only read by the API, which caps them at 1 MB (`MAX_BODY_BYTES` in `apps/api/src/app.ts`,
-answered `413 { error }`). Above it, Bun's own cap of 128 MB still applies to the whole server.
+Request bodies are only read by the API, which caps them at `MAX_BODY_BYTES` (1 MB when unset, `413 { error }` past
+it). Above that, Bun's own cap of 128 MB still applies to the whole server.
 
 The `.env` at the repo root is loaded by `dev` and `start` (`--env-file`); a variable already set wins over it. The
 Docker image runs the same `dist/`, with settings from `docker run -e` or `--env-file`.

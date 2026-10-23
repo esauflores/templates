@@ -4,14 +4,14 @@ The Hono API, everything under `/api`, served by `server/` on the web app's orig
 It's organized by feature: each **module** owns its routes, schemas, logic and tables, and `app.ts` only wires
 modules together. `modules/hello/` is the working example to copy, `modules/notes/` the one with a table.
 
-| Endpoint                | What it answers                                                          |
-| ----------------------- | ------------------------------------------------------------------------ |
-| `GET /api/health`       | `{ ok: true }`, for uptime checks                                        |
-| `GET /api/openapi.json` | The OpenAPI 3.1 document, built from the modules (`/health` isn't in it) |
-| `GET /api/hello/{name}` | `{ message }`: the example module                                        |
-| `GET /api/notes`        | `{ notes, next }`: a page, newest first (`?limit=20&before=<next>`)      |
-| `POST /api/notes`       | `{ text }` saves a note and answers it, `201`                            |
-| `PATCH /api/notes/{id}` | `{ text }` changes a note's text and answers it; `404` when there's none |
+| Endpoint                | What it answers                                                             |
+| ----------------------- | --------------------------------------------------------------------------- |
+| `GET /api/health`       | `{ ok: true }` after a `SELECT 1`, so a database that can't answer fails it |
+| `GET /api/openapi.json` | The OpenAPI 3.1 document, built from the modules (`/health` isn't in it)    |
+| `GET /api/hello/{name}` | `{ message }`: the example module                                           |
+| `GET /api/notes`        | `{ notes, next }`: a page, newest first (`?limit=20&before=<next>`)         |
+| `POST /api/notes`       | `{ text }` saves a note and answers it, `201`                               |
+| `PATCH /api/notes/{id}` | `{ text }` changes a note's text and answers it; `404` when there's none    |
 
 ## Layout
 
@@ -57,8 +57,8 @@ tests/
    `/api`, so routes are written without it (`/hello/{name}` answers `/api/hello/{name}`).
 2. The request is logged once answered (`core/logger.ts`: `GET /api/hello/world 200 3ms`; not `/api/health`;
    tests show the lines only when one fails). Then `secureHeaders()`, the rate limit (see below) and
-   the body limit run, then the module route. A body over 1 MB answers `413 { error }` (`MAX_BODY_BYTES` in
-   `app.ts`; raise it for uploads, or give one route a `bodyLimit` of its own).
+   the body limit run, then the module route. A body over the limit answers `413 { error }` (`MAX_BODY_BYTES` in
+   `.env`, 1 MB when unset; raise it for uploads, or give one route a `bodyLimit` of its own).
 3. Zod checks params, query and body against the route's schemas. Invalid input answers `400 { error }`
    with Zod's readable message; the handler doesn't run.
 4. Errors end in `core/errors.ts`: an `HTTPException` below 500 answers `{ error: message }` (or the response a
@@ -104,6 +104,11 @@ Every client gets 300 requests a minute across `/api` (`/api/health` isn't count
 turns the limit off (for a benchmark, say, where every request comes from one client). Past it, a
 request answers `429 { error }` with `Retry-After`, and the web app shows that message (its query client doesn't
 retry a 4xx). Every answer carries `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset`.
+
+The client is the `X-Forwarded-For` address a proxy adds when `TRUST_PROXY=true` (the image's default), and the
+connection's otherwise. The server prints which at start, so a wrong one shows instead of quietly breaking the count:
+trusted with no proxy, every request looks like a new client; untrusted behind one, every request looks like the
+proxy.
 
 A route that's worth abusing (a login, a sign-up, an email) adds a stricter limit of its own, on top, in its
 module's chain and before the route: Hono runs middleware in the order it's added, so one added after the route
