@@ -1,0 +1,10 @@
+# Bun fullstack base
+
+> A Hono API and a React app served by one Bun server. Zod schemas validate every request, generate the OpenAPI
+> document, and type the client.
+
+## API
+
+- [OpenAPI document](/api/openapi.json): every endpoint, its parameters and its answers
+- [Greeting](/api/hello/world): `GET /api/hello/{name}`, a greeting for a name
+- [Health](/api/health): `GET /api/health`, whether the API is up

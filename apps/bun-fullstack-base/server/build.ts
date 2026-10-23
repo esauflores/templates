@@ -1,5 +1,5 @@
 import tailwind from "bun-plugin-tailwind";
-import { rm } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 /**
@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
  * - root is the repo, so dist/ mirrors it (dist/server/src/server.js, dist/apps/web/index.html), and publicPath
  *   makes the page link its files from / on any route.
  * - The built server finds those files from its working directory: run it from dist/ (`bun run start` does).
+ * - The web app's public/ is copied as is, for page.ts to answer its files at their own paths.
  * - NODE_ENV is inlined, which turns off the dev server in server.ts and gives React's production build.
  */
 export const buildOptions = {
@@ -23,7 +24,7 @@ export const buildOptions = {
 } satisfies Bun.BuildConfig;
 
 /** The page's text files, which get a gzip copy; the server's own code (dist/server/) and source maps don't. */
-const COMPRESSIBLE = /\.(html|js|css|svg)$/;
+const COMPRESSIBLE = /\.(html|js|css|svg|txt|xml|json)$/;
 
 /** Writes a gzip copy next to a file (file.gz), at the highest level and only when it's smaller, for page.ts. */
 export async function compress(path: string) {
@@ -36,9 +37,12 @@ if (import.meta.main) {
   const outdir = fileURLToPath(new URL("./dist", import.meta.url));
   await rm(outdir, { recursive: true, force: true });
   const result = await Bun.build({ ...buildOptions, outdir });
-  const pageFiles = result.outputs
-    .map((output) => output.path)
-    .filter((path) => COMPRESSIBLE.test(path) && !path.startsWith(`${outdir}/server/`));
+  const publicDir = `${outdir}/apps/web/public`;
+  await cp(fileURLToPath(new URL("../apps/web/public", import.meta.url)), publicDir, { recursive: true });
+  const publicFiles = await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: publicDir, absolute: true, dot: true }));
+  const pageFiles = [...result.outputs.map((output) => output.path), ...publicFiles].filter(
+    (path) => COMPRESSIBLE.test(path) && !path.startsWith(`${outdir}/server/`),
+  );
   await Promise.all(pageFiles.map(compress));
   console.log(`Built ${result.outputs.length} files into server/dist/, ${pageFiles.length} of them gzipped`);
 }

@@ -58,4 +58,14 @@ describe("pageRoutes", () => {
     expect(new TextDecoder().decode(Bun.gunzipSync(await js.arrayBuffer()))).toBe(JS);
     expect(js.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
   });
+
+  it("answers the files in public/ at their own paths, checked every time", async () => {
+    const page = await builtPage({ "index.html": "<html></html>" });
+    await Bun.write(join(dir, "public", "robots.txt"), "User-agent: *\n");
+    const robots = route(await pageRoutes(page), "/robots.txt");
+
+    expect(await robots.text()).toBe("User-agent: *\n");
+    expect(robots.headers.get("content-type")).toBe("text/plain;charset=utf-8");
+    expect(robots.headers.get("cache-control")).toBe("no-cache");
+  });
 });

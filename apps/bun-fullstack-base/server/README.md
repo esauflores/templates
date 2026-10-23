@@ -9,12 +9,12 @@ path, on one port. It isn't an app of its own: it imports both by their workspac
 ```
 src/
 ├── server.ts       Bun.serve: the routes, the port, graceful shutdown on SIGTERM and SIGINT
-└── page.ts         pageRoutes(): the web app's routes, as Bun bundles them (dev) or as built (production)
-build.ts            the production build into dist/, and the gzip copies of the page's files
+└── page.ts         pageRoutes(): the web app's routes (the page and public/), as Bun bundles them (dev) or as built
+build.ts            the production build into dist/, a copy of web's public/, and the gzip copies of the page's files
 bunfig.toml         Tailwind as Bun's bundler plugin, for dev
 tests/
 ├── build.test.ts   runs the production build: the page is there and its CSS went through Tailwind
-└── page.test.ts    pageRoutes() with a built page: from memory, gzipped, with cache headers
+└── page.test.ts    pageRoutes() with a built page: from memory, gzipped, with cache headers, and public/
 ```
 
 ## Dev and production
@@ -28,11 +28,11 @@ tests/
 - **Production** (`bun run start`): runs `dist/server/src/server.js` from `dist/`, as the built server finds the
   page's files from its working directory. `page.ts` reads them once at start and answers each with one fixed
   response, from memory:
-  - The gzip copy, when there is one, with `Content-Encoding: gzip`: every browser accepts gzip on any connection.
-    Brotli is 13% smaller, but browsers only accept it over HTTPS or on localhost, and a fixed brotli response
-    breaks the page anywhere else.
+  - The gzip copy, when there is one, with `Content-Encoding: gzip`: every browser accepts gzip.
   - `Cache-Control: public, max-age=31536000, immutable` on the hashed files, `no-cache` on `index.html`, so a new
     deploy shows at once. Bun answers `304` itself when the browser's ETag matches.
+  - The web app's `public/`, copied into `dist/` by the build, is served the same way, each file at its own path
+    (`/robots.txt`), with `no-cache` as its names aren't hashed.
   - One fixed response per file keeps Bun's fast path for static responses: no code runs per request.
 
 A request body over 1 MB is refused with `413` before anything reads it, declared or chunked (`MAX_BODY_BYTES` in

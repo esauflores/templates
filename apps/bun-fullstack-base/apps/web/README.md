@@ -16,8 +16,9 @@ working example to copy.
 
 ```
 index.html           the entry: Bun bundles the script it loads (src/main.tsx) and everything it imports
-public/              files index.html links (favicon.svg), bundled with a hashed name
+public/              files served at their own paths (/robots.txt, /llms.txt), as Vite does
 src/
+├── assets/          files index.html or the code links (favicon.svg), bundled under a hashed name
 ├── main.tsx         the router and the QueryClientProvider; one route per page
 ├── env.d.ts         types for CSS imports and Bun's import.meta.hot
 ├── components/      the app's own components (ApiStatus, ThemeToggle)
@@ -52,8 +53,10 @@ tests/
   `global.css`, which `main.tsx` imports. Classes are found in the source files, so there is no Tailwind config.
 - **Routes**: the server answers every non-`/api` path with `index.html` (200), and React Router picks the page.
   Unknown paths are sent to `/` in the browser (the `*` route's `<Navigate>`).
-- **Static files**: `public/` isn't Vite's: a file is served only when `index.html` links it, under a hashed name
-  (in production, `/favicon-<hash>.svg`). Any other path, `/favicon.ico` included, gets `index.html`.
+- **Static files**: as with Vite, each file in `public/` is served at its own path (`public/robots.txt` at
+  `/robots.txt`), checked by the browser on every load: for files that need a fixed one. Files the page links go in
+  `src/assets/` instead, bundled under a hashed name (in production, `/favicon-<hash>.svg`), which browsers keep.
+  Any other path, `/favicon.ico` included, gets `index.html`.
 - **Dev** listens on `127.0.0.1` only; production listens on every interface, for Docker.
 
 ## Calling the API
