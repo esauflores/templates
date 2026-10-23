@@ -35,6 +35,9 @@ tests/
     deploy shows at once. Bun answers `304` itself when the browser's ETag matches.
   - One fixed response per file keeps Bun's fast path for static responses: no code runs per request.
 
+A request body over 1 MB is refused with `413` before anything reads it, declared or chunked (`MAX_BODY_BYTES` in
+`server.ts`; Bun's own default is 128 MB). Raise it for uploads.
+
 The `.env` at the repo root is loaded by `dev` and `start` (`--env-file`); a variable already set wins over it. The
 Docker image runs the same `dist/`, with settings from `docker run -e` or `--env-file`.
 

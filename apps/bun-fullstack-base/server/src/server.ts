@@ -14,7 +14,12 @@ import { pageRoutes } from "./page.ts";
  *   reload, browser console) isn't reachable from the network.
  * - `bun run build`, then `bun run start`: build.ts bundles this file, the API and the page into dist/ ahead of time,
  *   with NODE_ENV inlined as production; the page's files are read once at start and served from memory (page.ts).
+ *
+ * A request body over 1 MB is refused with 413 before anything reads it (Bun's own default is 128 MB). Raise
+ * MAX_BODY_BYTES for uploads.
  */
+const MAX_BODY_BYTES = 1024 * 1024;
+
 const port = Number(process.env.PORT || 3000);
 if (!Number.isInteger(port) || port <= 0 || port > 65535) throw new Error(`invalid PORT, got "${process.env.PORT}"`);
 
@@ -23,6 +28,7 @@ const app = createApp();
 const server = Bun.serve({
   port,
   hostname: process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1",
+  maxRequestBodySize: MAX_BODY_BYTES,
   routes: {
     "/api": app.fetch,
     "/api/*": app.fetch,

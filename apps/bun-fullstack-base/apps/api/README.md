@@ -46,7 +46,9 @@ tests/
 
 1. The server (`server/src/server.ts`) sends `/api` and `/api/*` to `createApp().fetch`. The app's base path is
    `/api`, so routes are written without it (`/hello/{name}` answers `/api/hello/{name}`).
-2. `secureHeaders()` runs, then the rate limit (see below), then the module route that matches.
+2. The request is logged (Hono's `logger()`: `<-- GET /api/hello/world`, then `--> GET /api/hello/world 200 3ms`;
+   not `/api/health`; tests show them only when one fails). Then `secureHeaders()` and the rate limit (see below)
+   run, then the module route.
 3. Zod checks params, query and body against the route's schemas. Invalid input answers `400 { error }`
    with Zod's readable message; the handler doesn't run.
 4. Errors end in `core/errors.ts`: an `HTTPException` below 500 answers `{ error: message }` (or the response a

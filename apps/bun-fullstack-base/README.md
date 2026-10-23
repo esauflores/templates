@@ -98,7 +98,8 @@ docker run --rm -p 3000:3000 bun-fullstack-base   # pass settings with -e PORT=â
 
 The image (on `oven/bun:1.4.3`, the Bun that `packageManager` pins) is built in two stages. The first installs the
 dependencies and runs `bun run build` on Debian slim; the second keeps only `server/dist/` (a few MB, no
-`node_modules`) and runs it on Alpine as the `bun` user, about 150 MB in all. Checks and tests run outside it.
+`node_modules`) and runs it on Alpine as the `bun` user, about 150 MB in all. Checks and tests run outside it. Its
+`HEALTHCHECK` calls `/api/health` every 30 s, so Docker can tell when the server stops answering.
 
 Don't expose the image on its own: put a reverse proxy (Caddy, nginx, your platform's) in front. It terminates TLS,
 compresses the API's responses (the page's files come compressed already), and sets security headers on the page
