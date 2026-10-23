@@ -33,9 +33,6 @@ VOLUME /data
 # to X-Forwarded-For, not the proxy's. Override with -e TRUST_PROXY=false when nothing is in front.
 ENV TRUST_PROXY=true
 
-# Plain request logs (Hono's logger colors status codes unless NO_COLOR is set), as docker logs aren't a terminal.
-ENV NO_COLOR=1
-
 USER bun
 EXPOSE 3000
 

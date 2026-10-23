@@ -23,6 +23,7 @@ src/
 ├── core/            shared by every module, knows no feature
 │   ├── db.ts        db: the database (Turso, through Drizzle), migrated at start
 │   ├── errors.ts    notFound, onError: every error answers { error }
+│   ├── logger.ts    requestLogger(): one line per request, once answered
 │   ├── openapi.ts   createRouter(), ErrorSchema
 │   └── rate-limit.ts  rateLimit(): requests per client IP, 429 { error } past the limit
 └── modules/
@@ -54,8 +55,8 @@ tests/
 
 1. The server (`server/src/server.ts`) sends `/api` and `/api/*` to `createApp().fetch`. The app's base path is
    `/api`, so routes are written without it (`/hello/{name}` answers `/api/hello/{name}`).
-2. The request is logged (Hono's `logger()`: `<-- GET /api/hello/world`, then `--> GET /api/hello/world 200 3ms`;
-   not `/api/health`; tests show them only when one fails). Then `secureHeaders()`, the rate limit (see below) and
+2. The request is logged once answered (`core/logger.ts`: `GET /api/hello/world 200 3ms`; not `/api/health`;
+   tests show the lines only when one fails). Then `secureHeaders()`, the rate limit (see below) and
    the body limit run, then the module route. A body over 1 MB answers `413 { error }` (`MAX_BODY_BYTES` in
    `app.ts`; raise it for uploads, or give one route a `bodyLimit` of its own).
 3. Zod checks params, query and body against the route's schemas. Invalid input answers `400 { error }`

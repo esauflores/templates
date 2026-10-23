@@ -1,11 +1,10 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { bodyLimit } from "hono/body-limit";
-import { except } from "hono/combine";
 import { HTTPException } from "hono/http-exception";
-import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 
 import { notFound, onError } from "@api/core/errors.ts";
+import { requestLogger } from "@api/core/logger.ts";
 import { apiRateLimit, rateLimit } from "@api/core/rate-limit.ts";
 import { helloRoutes } from "@api/modules/hello/hello.routes.ts";
 import { notesRoutes } from "@api/modules/notes/notes.routes.ts";
@@ -16,7 +15,7 @@ const MAX_BODY_BYTES = 1024 * 1024;
 /**
  * The API, everything under /api. It's on the web app's origin (server.ts puts both on one port), so no CORS.
  * The routes are chained so the returned type carries every one of them, for the web app's typed client.
- * Each request is logged (`<-- GET /api/hello/world`, then `--> … 200 3ms`), except /health.
+ * Each request is logged once answered (`GET /api/hello/world 200 3ms`), except /health.
  * Each client gets RATE_LIMIT requests a minute (300 by default, 0 for no limit), /health aside; stricter routes add
  * their own `rateLimit`.
  * A request body over MAX_BODY_BYTES answers `413 { error }`, from its Content-Length before anything reads it, or
@@ -27,7 +26,7 @@ export function createApp() {
 
   app.notFound(notFound);
   app.onError(onError);
-  app.use(except("/api/health", logger()));
+  app.use(requestLogger({ skip: ["/api/health"] }));
   app.use(secureHeaders());
   const limit = apiRateLimit();
   if (limit > 0) app.use(rateLimit({ limit, windowMs: 60_000, skip: (c) => c.req.path === "/api/health" }));

@@ -61,10 +61,10 @@ fresh database of 50 notes.
 | Memory, started / loaded        | 55 / 78 MB RSS, own 17 / 35 MB      |
 | `/` (index.html)                | 268k req/s [266–277k], p99 0.8 ms   |
 | JS bundle (105 KB gzipped)      | 74k req/s [71–74k], p99 2.7 ms      |
-| `/api/hello/{name}`             | 50k req/s [44–51k], p99 5.1 ms      |
-| `GET /api/notes` (a page of 20) | 19.8k req/s [17.6–20.0k], p99 13 ms |
-| `POST /api/notes`               | 7.9k req/s [7.3–8.0k], p99 29 ms    |
-| `PATCH /api/notes/{id}`         | 10.3k req/s [10.2–10.9k], p99 23 ms |
+| `/api/hello/{name}`             | 60k req/s [60–61k], p99 4.2 ms      |
+| `GET /api/notes` (a page of 20) | 22k req/s [21.6–22.2k], p99 11 ms   |
+| `POST /api/notes`               | 8.6k req/s [7.3–8.6k], p99 25 ms    |
+| `PATCH /api/notes/{id}`         | 12.3k req/s [12.3–12.4k], p99 17 ms |
 
 - The page is bundled ahead of time, so the first request is answered at once, from memory: the bundler and
   Tailwind aren't loaded at runtime.
@@ -88,9 +88,15 @@ fresh database of 50 notes.
   one row, while the insert adds one.
 - Writing grows the server's memory: after 24k notes in 5 s it was 138 MB RSS, 94 MB its own (78 / 35 MB after the
   API's reads). Not looked into further.
-- The request logger costs about a third of the API's throughput on one core (one line to stdout per request).
-- One core tops out around 50k requests a second on the API and 270k on the HTML, far beyond what one instance
-  usually sees. To use more cores, run more instances behind the proxy.
+- The request logger is the API's biggest cost after the database: about half of `/api/hello`'s time in the process.
+  Writing one line per request once answered (`core/logger.ts`), instead of Hono's `logger()` in an `except()` (two
+  lines), took `/api/hello` from 49k to 61k req/s, `GET /api/notes` from 19k to 22k and `POST` from 7.5k to 8.5k (6
+  rounds each, alternating). Of the rest, `secureHeaders()` costs about 3 µs a request and the body limit 1.5 µs;
+  Drizzle's row mapping costs nothing measurable against Turso's own.
+- One core tops out around 60k requests a second on the API and 270k on the HTML, far beyond what one instance
+  usually sees. It's one process per database: Turso locks the file to the process that opened it, so a second
+  instance on the same file fails at start. (Turso's experimental `multiprocess_wal` lifts that: two processes
+  read 1.9 times and write 1.3 times as much, measured, but it isn't on here.)
 - On a power-saving profile the core runs at about a third of its clock and every number drops by half or more.
 
 To rerun it: `bun run build`, then from `server/dist/`,
