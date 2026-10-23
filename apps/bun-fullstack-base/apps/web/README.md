@@ -15,7 +15,7 @@ working example to copy.
 ## Layout
 
 ```
-index.html           the entry: Bun bundles the script it loads (src/main.tsx) and everything that imports
+index.html           the entry: Bun bundles the script it loads (src/main.tsx) and everything it imports
 public/              files index.html links (favicon.svg), bundled with a hashed name
 src/
 ├── main.tsx         the router and the QueryClientProvider; one route per page
@@ -50,7 +50,7 @@ tests/
 - **Routes**: the server answers every non-`/api` path with `index.html` (200), and React Router picks the page.
   Unknown paths are sent to `/` in the browser (the `*` route's `<Navigate>`).
 - **Static files**: `public/` isn't Vite's: a file is served only when `index.html` links it, under a hashed name
-  (`/favicon-6tpqq1kq.svg`). Any other path, `/favicon.ico` included, gets `index.html`.
+  (in production, `/favicon-6tpqq1kq.svg`). Any other path, `/favicon.ico` included, gets `index.html`.
 - **Dev** listens on `127.0.0.1` only; production listens on every interface, for Docker.
 
 ## Calling the API

@@ -46,9 +46,9 @@ browser ── :3000 ── server
 - **Bun bundles the web app.** There's no Vite dev server. In dev, Bun bundles the page as it's requested,
   rebundles on change and hot-reloads it (React Fast Refresh). For production, `bun run build` (`server/build.ts`)
   bundles the server with everything it imports, the API and the page included, into `server/dist/`: the page
-  becomes hashed JS and CSS files, gzipped, that the built server loads into memory at
-  start, so a broken import fails the build, not a request.
-  Tailwind runs as Bun's bundler plugin (`server/bunfig.toml` in dev, `build.ts` for the build).
+  becomes hashed JS and CSS files, gzipped, that the built server loads into memory at start, so a broken import
+  fails the build, not a request. Tailwind runs as Bun's bundler plugin (`server/bunfig.toml` in dev, `build.ts`
+  for the build). [`server/README.md`](server/README.md) has the details and a benchmark.
 - **The apps, and the server that runs them.** `apps/api` and `apps/web` are the apps; `server/` puts them on one
   port, importing them by name (`"api"`, `"web/index.html"`). Each is a workspace with its own `package.json` and
   dependencies; the root only holds the tooling and the scripts.
@@ -58,7 +58,7 @@ browser ── :3000 ── server
 - **Typed end to end.** A route declares its input and its responses with Zod. Invalid input answers
   `400 { error }` before the handler runs. A handler that answers anything undeclared fails the type-check. The
   routes appear in `/api/openapi.json`. The web app's client (`hc<AppType>`) takes its params and response types
-  from the same routes, and the API's code never reaches the bundle: only its types do.
+  from the same routes, and the API's code never reaches the page's bundle: only its types do.
 - **One error shape.** The API answers every error it builds as `{ error: string }`, and the web app's `call()`
   turns it into an `ApiError` whose message can go straight on the screen.
 
@@ -77,8 +77,7 @@ tests).
 ## Layout
 
 ```
-server/           Bun.serve in src/server.ts: /api to the API, the rest to the web app (src/page.ts)
-                  build.ts: the production build into dist/; bunfig.toml: Tailwind in dev
+server/           Bun.serve (/api to the API, the rest to the web app), build.ts             → server/README.md
 apps/
 ├── api/          the Hono API: core/ (errors, OpenAPI router) and modules/                  → apps/api/README.md
 └── web/          the React app: lib/api.ts (the typed client), pages/                      → apps/web/README.md

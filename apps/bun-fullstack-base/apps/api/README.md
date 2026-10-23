@@ -128,7 +128,7 @@ Say, `books`:
 
 The module then shows up in `/api/openapi.json`, and the web app calls it as
 `api.books[":id"].$get({ param: { id } })`, typed from its schemas. A handler's `c.json(…)` must match a declared
-response (status and shape), or `vp check` fails, so the document can't drift from the API.
+response (status and shape), or `bun run check` fails, so the document can't drift from the API.
 
 ## Conventions
 
