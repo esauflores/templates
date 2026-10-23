@@ -1,7 +1,7 @@
 import { Moon, Sun } from "lucide-react";
 import { useState } from "react";
 
-import { applyTheme, preferredTheme } from "@web/lib/theme.ts";
+import { preferredTheme, saveTheme } from "@web/lib/theme.ts";
 
 /** Switches between light and dark, and remembers the choice. */
 export function ThemeToggle() {
@@ -9,7 +9,7 @@ export function ThemeToggle() {
   const next = theme === "dark" ? "light" : "dark";
 
   const toggle = () => {
-    applyTheme(next, { save: true });
+    saveTheme(next);
     setTheme(next);
   };
 

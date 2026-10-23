@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import { ThemeToggle } from "@web/components/ThemeToggle.tsx";
-import { applyTheme } from "@web/lib/theme.ts";
+import { saveTheme } from "@web/lib/theme.ts";
 
 afterEach(() => {
   cleanup();
@@ -12,7 +12,7 @@ afterEach(() => {
 
 describe("ThemeToggle", () => {
   it("switches to dark and back, and remembers the choice", () => {
-    applyTheme("light", { save: true });
+    saveTheme("light");
     render(<ThemeToggle />);
 
     fireEvent.click(screen.getByRole("button", { name: "Use the dark theme" }));

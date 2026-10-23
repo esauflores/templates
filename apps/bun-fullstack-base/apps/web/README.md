@@ -101,7 +101,8 @@ classes (`bg-background`, `text-destructive`, `bg-brand`, …) rather than raw c
 adds `brand` (the lime accent; `brand-text` where it's text, darker in light), `subtle`, `edge` (a stronger border),
 `success`, `success-muted`, `destructive-muted`, `code` and `code-string`. Add one the same way: a variable in both
 blocks, and a `--color-*` in `@theme`. Icons come from [Lucide](https://lucide.dev) (`lucide-react`), as shadcn's
-do. The page starts in the system's theme until the toggle saves a choice.
+do. The page starts in the system's theme until the toggle saves a choice; a small script in `index.html` sets it
+before the first paint, so a dark page doesn't flash light.
 
 ## Tests
 
