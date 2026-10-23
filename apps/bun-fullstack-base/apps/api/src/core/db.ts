@@ -37,4 +37,23 @@ export const db = drizzle(path);
 db.run(sql`PRAGMA journal_mode = WAL`);
 db.run(sql`PRAGMA synchronous = NORMAL`);
 db.run(sql`PRAGMA foreign_keys = ON`);
+
+/**
+ * Fail at start if a pragma didn't take, rather than run with the wrong setting. A filesystem without WAL support
+ * (NFS, some bind mounts) silently keeps the old journal_mode, which would only show up as slow writes, and
+ * foreign_keys off would let rows reference ones that don't exist.
+ */
+const expected: Record<string, readonly unknown[]> = {
+  journal_mode: ["wal", "memory"],
+  synchronous: [1], // NORMAL
+  foreign_keys: [1],
+};
+
+for (const [name, allowed] of Object.entries(expected)) {
+  const value = db.get<Record<string, unknown>>(sql.raw(`PRAGMA ${name}`))?.[name];
+  if (!allowed.includes(value)) {
+    throw new Error(`PRAGMA ${name} is ${JSON.stringify(value)} on ${path}, expected ${allowed.join(" or ")}`);
+  }
+}
+
 migrate(db, { migrationsFolder });

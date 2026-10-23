@@ -107,8 +107,11 @@ the `bun` user, about 150 MB in all (about 50 MB to pull, Alpine's busybox shell
 fine because nothing native is loaded: SQLite is the copy inside Bun, there's no addon to build for the CPU the image
 runs on, and the build stage's output is plain JavaScript. A native module added later needs a musl build, or that
 stage goes back to `-slim`. The database lives in the `/data` volume: mount one there, or it's lost with the container.
-Checks and tests run outside it. Its `HEALTHCHECK` calls `/api/health` every 30 s, so Docker can tell when the server
-stops answering.
+A named volume (`-v app-data:/data`) is copied from the image, so the `bun` user owns it and can write; a bind mount
+(`-v $PWD/data:/data`) keeps the host directory's owner, and if that isn't uid 1000 the server exits at start with
+`SQLiteError: unable to open database file` — `sudo chown -R 1000:1000 data` first, or run it with
+`--user "$(id -u):$(id -g)"`. Checks and tests run outside it. Its `HEALTHCHECK` calls `/api/health` every 30 s, so
+Docker can tell when the server stops answering.
 
 Don't expose the image on its own: put a reverse proxy (Caddy, nginx, your platform's) in front. It terminates TLS,
 compresses the API's responses (the page's files come compressed already), and sets security headers on the page
