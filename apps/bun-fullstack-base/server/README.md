@@ -57,15 +57,15 @@ fresh database of 50 notes.
 
 |                                 | Built (`dist/`)                       |
 | ------------------------------- | ------------------------------------- |
-| Ready to answer                 | 64 ms [59–91], each on a new database |
+| Ready to answer                 | 57 ms [56–81], each on a new database |
 | First page request              | 0.2 ms                                |
 | Memory, started / loaded        | 55 / 78 MB RSS, own 17 / 35 MB        |
-| `/` (index.html)                | 269k req/s [232–270k], p99 0.8 ms     |
-| JS bundle (105 KB gzipped)      | 70k req/s [69–71k], p99 3.0 ms        |
-| `/api/hello/{name}`             | 56k req/s [55–64k], p99 4.9 ms        |
-| `GET /api/notes` (a page of 20) | 21k req/s [19.6–21k], p99 12 ms       |
-| `POST /api/notes`               | 10.3k req/s [10.2–10.5k], p99 19 ms   |
-| `PATCH /api/notes/{id}`         | 12.0k req/s [11.9–12.1k], p99 18 ms   |
+| `/` (index.html)                | 281k req/s [281–284k], p99 0.7 ms     |
+| JS bundle (105 KB gzipped)      | 77k req/s [77–77k], p99 2.5 ms        |
+| `/api/hello/{name}`             | 70k req/s [69–70k], p99 3.3 ms        |
+| `GET /api/notes` (a page of 20) | 25k req/s [25–25k], p99 9.2 ms        |
+| `POST /api/notes`               | 11.7k req/s [11.6–11.7k], p99 17 ms   |
+| `PATCH /api/notes/{id}`         | 13.5k req/s [13.5–13.5k], p99 16 ms   |
 
 - The page is bundled ahead of time, so the first request is answered at once, from memory: the bundler and
   Tailwind aren't loaded at runtime.
@@ -94,7 +94,7 @@ fresh database of 50 notes.
   lines), took `/api/hello` from 49k to 61k req/s, `GET /api/notes` from 19k to 22k and `POST` from 7.5k to 8.5k (6
   rounds each, alternating). Of the rest, `secureHeaders()` costs about 3 µs a request and the body limit 1.5 µs;
   Drizzle's row mapping costs nothing measurable against Turso's own.
-- One core tops out around 60k requests a second on the API and 270k on the HTML, far beyond what one instance
+- One core tops out around 70k requests a second on the API and 280k on the HTML, far beyond what one instance
   usually sees. It's one process per database: Turso locks the file to the process that opened it, so a second
   instance on the same file fails at start. (Turso's experimental `multiprocess_wal` lifts that: two processes
   read 1.9 times and write 1.3 times as much, measured, but it isn't on here.)
