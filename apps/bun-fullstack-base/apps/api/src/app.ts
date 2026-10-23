@@ -26,5 +26,5 @@ export function createApp() {
   return app.get("/health", (c) => c.json({ ok: true })).route("/", helloRoutes);
 }
 
-/** The API's routes and their types, for the web app's client (`hc<AppType>` from hono/client). */
+/** The API's routes and their types, for the web app's client (`hc<AppType>`, through client.ts). */
 export type AppType = ReturnType<typeof createApp>;

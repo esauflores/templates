@@ -141,8 +141,8 @@ Run them from the root with `bun run test`.
 ## Conventions
 
 - Imports use `@web/…` for `src/`, with explicit `.ts`/`.tsx` extensions, and `./` within the same folder. The API
-  is imported by its package name (`import type { AppType } from "api"`), types only: never import the API's code.
+  is imported from `api/client`: Hono's client and the `AppType` type, so web doesn't depend on Hono itself. Never
+  import the API's code (`"api"`), which would bundle the server into the page.
   `@api/…` resolves too (`tsconfig.json`), only because the API's own files use it.
 - Never `fetch` `/api` by hand: go through `api` and `call`, or the types are lost.
 - Comments go above the code they explain (doc comments), not inside function bodies or at the end of a line.
-- `hono` stays on the same version here and in `apps/api`, or the client's types break.

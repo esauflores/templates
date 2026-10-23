@@ -111,8 +111,7 @@ The image sets `TRUST_PROXY=true`, so the API's rate limit counts each client by
 
 - Imports use `@api/…` and `@web/…` for each package's own `src/`, with explicit `.ts`/`.tsx` extensions. Files in
   the same folder (a module's routes, schemas and service) import each other with `./`. One package imports another
-  by its workspace name (`"api"`, `"web/index.html"`).
+  by its workspace name (`"api"`, `"api/client"`, `"web/index.html"`).
 - Tests live in each package's `tests/`, mirroring `src/`.
 - Comments go above the code they explain (doc comments), not inside function bodies or at the end of a line.
-- `hono` stays on the same version in `apps/api` and `apps/web`, or the client's types break.
 - Lines wrap at 120 characters; `bun run check:fix` formats and sorts imports.

@@ -1,6 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import type { AppType } from "api";
-import { DetailedError, hc, parseResponse, type ClientResponse } from "hono/client";
+import { type AppType, type ClientResponse, DetailedError, hc, parseResponse } from "api/client";
 
 /** The API's typed client, built from its routes: `api.hello[":name"].$get({ param: { name } })`. */
 export const api = hc<AppType>("/").api;

@@ -16,6 +16,7 @@ together. `modules/hello/` is the working example to copy.
 src/
 ├── app.ts           createApp(): the /api base path, core middleware, the OpenAPI document, /health,
 │                    then each module's router; exports AppType
+├── client.ts        what the web app imports (api/client): Hono's typed client and AppType
 ├── core/            shared by every module, knows no feature
 │   ├── errors.ts    notFound, onError: every error answers { error }
 │   ├── openapi.ts   createRouter(), ErrorSchema
@@ -164,4 +165,3 @@ response (status and shape), or `bun run check` fails, so the document can't dri
 - Files are named `<module>.<role>.ts`, so open tabs and search results say which module they belong to.
 - Status codes are explicit in `c.json(body, status)`, so the client can tell responses apart.
 - Comments go above the code they explain (doc comments), not inside function bodies or at the end of a line.
-- `hono` stays on the same version here and in `apps/web`, or the client's types break.
