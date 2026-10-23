@@ -7,14 +7,19 @@ import { ThemeToggle } from "@web/components/ThemeToggle.tsx";
 import { api, ApiError, call } from "@web/lib/api.ts";
 import { cn } from "@web/lib/utils.ts";
 
-/** What the template is made of, for "What's inside". */
+/** What the template is made of, for "What's inside"; each links to its main tool's site. */
 const STACK = [
-  { tag: "runtime", name: "Bun", role: "Runs the server and bundles the page." },
-  { tag: "api", name: "Hono + Zod OpenAPI", role: "Validated, self-documenting routes." },
-  { tag: "ui", name: "React 19 + React Router", role: "The page and its routes." },
-  { tag: "data", name: "TanStack Query", role: "API data, cached and refetched." },
-  { tag: "style", name: "Tailwind CSS 4 + shadcn/ui", role: "Theme tokens and components." },
-  { tag: "tooling", name: "Vite+", role: "Format, lint, type-check and test." },
+  { tag: "runtime", name: "Bun", href: "https://bun.com", role: "Runs the server and bundles the page." },
+  { tag: "api", name: "Hono + Zod OpenAPI", href: "https://hono.dev", role: "Validated, self-documenting routes." },
+  { tag: "ui", name: "React 19 + React Router", href: "https://reactrouter.com", role: "The page and its routes." },
+  { tag: "data", name: "TanStack Query", href: "https://tanstack.com/query", role: "API data, cached and refetched." },
+  {
+    tag: "style",
+    name: "Tailwind CSS 4 + shadcn/ui",
+    href: "https://ui.shadcn.com",
+    role: "Theme tokens and components.",
+  },
+  { tag: "tooling", name: "Vite+", href: "https://viteplus.dev", role: "Format, lint, type-check and test." },
 ];
 
 /** The API's endpoints, for "Endpoints". */
@@ -99,10 +104,17 @@ export function Home() {
               <p className="text-sm text-subtle">One repo, three workspaces.</p>
             </div>
             <ul className="grid gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-2 lg:grid-cols-3">
-              {STACK.map(({ tag, name, role }) => (
+              {STACK.map(({ tag, name, href, role }) => (
                 <li key={name} className="flex flex-col gap-0.5 bg-card px-5 py-4">
                   <span className="font-mono text-xs text-brand-text">{tag}</span>
-                  <span className="text-[17px] font-semibold">{name}</span>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-fit text-[17px] font-semibold decoration-brand underline-offset-4 hover:underline"
+                  >
+                    {name}
+                  </a>
                   <span className="text-sm text-muted-foreground">{role}</span>
                 </li>
               ))}
