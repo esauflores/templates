@@ -55,7 +55,7 @@ was raised so it's never reached (the limiter still runs).
 | ------------------------------ | --------------------------------- |
 | Ready to answer                | 35 ms [33–37]                     |
 | First page request             | 0.2 ms                            |
-| Memory, started / loaded       | 35 / 54 MB                        |
+| Memory, started / loaded       | 35 / 54 MB RSS, own 10 / 18 MB    |
 | `/` (index.html)               | 273k req/s [272–281k], p99 0.7 ms |
 | JS bundle (105 KB gzipped)     | 76k req/s [73–77k], p99 2.5 ms    |
 | `/api/hello/{name}`            | 43k req/s [41–43k], p99 6.0 ms    |
@@ -63,6 +63,10 @@ was raised so it's never reached (the limiter still runs).
 
 - The page is bundled ahead of time, so the first request is answered at once, from memory: the bundler and
   Tailwind aren't loaded at runtime.
+- Most of the memory is Bun's own executable, mapped from disk: shared between instances, and given back to the
+  kernel when it needs it (`docker stats` leaves it out). The server's own memory is 10 MB idle (Hono, Zod, the
+  OpenAPI schemas, the page's files) and 18 MB under load (connection buffers, compiled code).
+  Bun's `--smol` and smaller GC settings didn't lower it.
 - The request logger costs about a third of the API's throughput on one core (one line to stdout per request);
   the rate limiter costs nothing measurable.
 - One core tops out around 40k requests a second on the API and 270k on the HTML, far beyond what one instance
