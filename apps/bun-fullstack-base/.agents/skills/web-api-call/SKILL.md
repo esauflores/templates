@@ -52,7 +52,8 @@ const addBook = useMutation({
 
 Invalidate the queries the change affects, so lists refetch. Show `addBook.error.message` the same way.
 
-A new page also needs a route in `apps/web/src/main.tsx` (`createBrowserRouter`).
+A new page also needs a route in `apps/web/src/main.tsx`: a `<Route path="/books" element={<Books />} />` in
+`<Routes>`, before the `*` fallback.
 
 ## Tests
 

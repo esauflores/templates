@@ -5,12 +5,12 @@ no Vite dev server, no Vite build. It talks to the API through Hono's
 [typed client](https://hono.dev/docs/guides/rpc#client), so the API's routes are its types. `pages/Home.tsx` is the
 working example to copy.
 
-| Piece   | What                                                                             |
-| ------- | -------------------------------------------------------------------------------- |
-| UI      | React 19, [shadcn/ui](https://ui.shadcn.com) components on Radix, Tailwind CSS 4 |
-| Routing | [React Router](https://reactrouter.com) (`createBrowserRouter` in `main.tsx`)    |
-| Data    | [TanStack Query](https://tanstack.com/query), over Hono's typed client           |
-| Tests   | Vitest browser mode (through Vite+), in headless Chromium, with Testing Library  |
+| Piece   | What                                                                                     |
+| ------- | ---------------------------------------------------------------------------------------- |
+| UI      | React 19, [shadcn/ui](https://ui.shadcn.com) components on Radix, Tailwind CSS 4         |
+| Routing | [React Router](https://reactrouter.com) (`<BrowserRouter>` and `<Routes>` in `main.tsx`) |
+| Data    | [TanStack Query](https://tanstack.com/query), over Hono's typed client                   |
+| Tests   | Vitest browser mode (through Vite+), in headless Chromium, with Testing Library          |
 
 ## Layout
 
@@ -82,7 +82,7 @@ Changes go through `useMutation`, invalidating the queries they affect so they r
 ## Adding a page
 
 1. `src/pages/Books.tsx`: a component exporting `Books`, reading data with `useQuery` as above.
-2. Add its route in `main.tsx`, before the `*` fallback: `{ path: "/books", element: <Books /> }`.
+2. Add its route in `main.tsx`, before the `*` fallback: `<Route path="/books" element={<Books />} />`.
 3. Test it in `tests/pages/books.test.tsx`: mock the API, render it, assert on the screen.
 
 ## Components
