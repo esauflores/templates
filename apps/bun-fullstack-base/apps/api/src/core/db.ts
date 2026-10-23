@@ -24,10 +24,17 @@ if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
  * Drizzle's typed queries. Each module declares its tables in `<module>.table.ts`. The migrations not yet applied
  * run once, the first time this file is imported, so the server starts on the current tables.
  * - Turso always journals to a WAL (app.db-wal): reads don't wait for writes.
- * - synchronous = NORMAL syncs the disk at checkpoints, not on every commit: about 30 times the writes a second.
- *   A crash of the process loses nothing; a power cut can lose the last commits, never the file.
+ * - synchronous = NORMAL syncs the disk at checkpoints, not on every commit: about 40 times the writes a second of
+ *   FULL, and faster than OFF, which risks the file. A crash of the process loses nothing; a power cut can lose the
+ *   last commits, never the file.
+ * - foreign_keys = ON makes a column's `.references()` hold: a row can't point at one that doesn't exist (off by
+ *   default, as in SQLite).
+ * - require_where = ON refuses an UPDATE or DELETE without a WHERE, so a missing filter can't change every row;
+ *   write `WHERE true` (in Drizzle, .where(sql`true`)) when that's meant.
  */
 export const db = drizzle(path);
 
 await db.run(sql`PRAGMA synchronous = NORMAL`);
+await db.run(sql`PRAGMA foreign_keys = ON`);
+await db.run(sql`PRAGMA require_where = ON`);
 await migrate(db, { migrationsFolder });

@@ -74,6 +74,9 @@ with [Drizzle](https://orm.drizzle.team) for typed queries (`drizzle-orm/tursoda
 
 - **Tables** belong to their module, in `<module>.table.ts`; only that module's service queries them. Another
   module asks through the service, as with everything else.
+- **Settings** (`core/db.ts`): `synchronous = NORMAL` (a power cut can lose the last commits, never the file),
+  foreign keys enforced (`.references()` holds), and `require_where`: an `UPDATE` or `DELETE` without a `WHERE`
+  fails, so write ``.where(sql`true`)`` when every row is meant.
 - **Prepared queries** for the ones that run on most requests: built once at the top of the service with
   `sql.placeholder(…)` for the values and `.prepare()`, so the database parses and plans them once, not per request
   (`notes.service.ts`: about twice the requests a second). Only the values can change between calls, and a column's
