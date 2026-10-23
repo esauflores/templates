@@ -1,4 +1,5 @@
 import tailwind from "bun-plugin-tailwind";
+import { rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 /**
@@ -33,6 +34,7 @@ export async function compress(path: string) {
 
 if (import.meta.main) {
   const outdir = fileURLToPath(new URL("./dist", import.meta.url));
+  await rm(outdir, { recursive: true, force: true });
   const result = await Bun.build({ ...buildOptions, outdir });
   const pageFiles = result.outputs
     .map((output) => output.path)
