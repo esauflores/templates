@@ -20,16 +20,19 @@ public/              files index.html links (favicon.svg), bundled with a hashed
 src/
 ├── main.tsx         the router and the QueryClientProvider; one route per page
 ├── env.d.ts         types for CSS imports and Bun's import.meta.hot
-├── components/
+├── components/      the app's own components (ApiStatus, ThemeToggle)
 │   └── ui/          shadcn components, added with bunx shadcn add (yours to edit)
 ├── lib/
 │   ├── api.ts       api (the typed client), call(), ApiError, createQueryClient()
+│   ├── theme.ts     light or dark: the .dark class on <html>, saved in localStorage
 │   └── utils.ts     cn(): merges Tailwind classes, used by the components
 ├── pages/           one component per route
 └── styles/
-    ├── global.css   Tailwind, shadcn's theme (colors, radius) as CSS variables
+    ├── fonts.css    Geist and Geist Mono, Latin only (Bun inlines the fonts a stylesheet links)
+    ├── global.css   Tailwind, the theme (colors, fonts, radius) as CSS variables, light and dark
     └── shadcn.css   shadcn's Tailwind additions (animations, variants), copied so shadcn stays a dev tool
 tests/
+├── components/      mirroring src/components/
 ├── lib/             mirroring src/lib/: call() and ApiError
 ├── pages/           mirroring src/pages/
 └── support/
@@ -50,7 +53,7 @@ tests/
 - **Routes**: the server answers every non-`/api` path with `index.html` (200), and React Router picks the page.
   Unknown paths are sent to `/` in the browser (the `*` route's `<Navigate>`).
 - **Static files**: `public/` isn't Vite's: a file is served only when `index.html` links it, under a hashed name
-  (in production, `/favicon-6tpqq1kq.svg`). Any other path, `/favicon.ico` included, gets `index.html`.
+  (in production, `/favicon-<hash>.svg`). Any other path, `/favicon.ico` included, gets `index.html`.
 - **Dev** listens on `127.0.0.1` only; production listens on every interface, for Docker.
 
 ## Calling the API
@@ -93,8 +96,12 @@ bunx shadcn add card
 They land in `src/components/ui/` as plain source to edit. shadcn's registry currently writes `import { cn } from "cn"`
 and adds the `cn` package to `apps/web/package.json`: change the import to `import { cn } from "@web/lib/utils.ts";`,
 run `bun remove cn` in `apps/web/`, then `bun run check:fix` from the root to format the file.
-Colors and radius are the CSS variables in `global.css` (light in `:root`, dark in `.dark`); use the theme's
-classes (`bg-background`, `text-destructive`, …) rather than raw colors.
+Colors, fonts and radius are the CSS variables in `global.css` (light in `:root`, dark in `.dark`); use the theme's
+classes (`bg-background`, `text-destructive`, `bg-brand`, …) rather than raw colors. Next to shadcn's, the template
+adds `brand` (the lime accent; `brand-text` where it's text, darker in light), `subtle`, `edge` (a stronger border),
+`success`, `success-muted`, `destructive-muted`, `code` and `code-string`. Add one the same way: a variable in both
+blocks, and a `--color-*` in `@theme`. Icons come from [Lucide](https://lucide.dev) (`lucide-react`), as shadcn's
+do. The page starts in the system's theme until the toggle saves a choice.
 
 ## Tests
 

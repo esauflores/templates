@@ -4,14 +4,18 @@ import { createRoot, type Root } from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 
 import { createQueryClient } from "@web/lib/api.ts";
+import { applyTheme, preferredTheme } from "@web/lib/theme.ts";
 import { Home } from "@web/pages/Home.tsx";
 
+import "@web/styles/fonts.css";
 import "@web/styles/global.css";
 
 const router = createBrowserRouter([
   { path: "/", element: <Home /> },
   { path: "*", element: <Navigate to="/" replace /> },
 ]);
+
+applyTheme(preferredTheme());
 
 const container = document.getElementById("root");
 if (!container) throw new Error('Missing <div id="root"> in web/index.html');

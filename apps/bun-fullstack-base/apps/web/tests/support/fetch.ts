@@ -1,6 +1,7 @@
 import { vi } from "vite-plus/test";
 
-type Handler = (body: unknown) => { status?: number; body?: unknown };
+/** A mocked route: gets the request's parsed JSON body, returns the status (200 by default) and body to answer. */
+export type Handler = (body: unknown) => { status?: number; statusText?: string; body?: unknown };
 
 /**
  * Replaces fetch with canned API responses keyed by "METHOD /path" (the path without the query string, e.g.
@@ -23,9 +24,9 @@ export function mockApi(routes: Record<string, Handler>) {
       calls.push({ key, url: url.pathname + url.search, body });
       const handler = routes[key];
       if (!handler) return Response.json({ error: `No mock for ${key}` }, { status: 500 });
-      const { status = 200, body: data } = handler(body);
-      if (status === 204) return new Response(null, { status });
-      return Response.json(data ?? null, { status });
+      const { status = 200, statusText, body: data } = handler(body);
+      if (status === 204) return new Response(null, { status, statusText });
+      return Response.json(data ?? null, { status, statusText });
     }),
   );
   return calls;

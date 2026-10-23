@@ -5,13 +5,15 @@ import { DetailedError, hc, parseResponse, type ClientResponse } from "hono/clie
 /** The API's typed client, built from its routes: `api.hello[":name"].$get({ param: { name } })`. */
 export const api = hc<AppType>("/").api;
 
-/** An API error, with the message from its `{ error }` body. */
+/** An API error, with the message from its `{ error }` body, and its status (`404`, "Not Found"). */
 export class ApiError extends Error {
   override readonly name = "ApiError";
   readonly status: number;
-  constructor(status: number, message: string) {
+  readonly statusText: string;
+  constructor(status: number, message: string, statusText = "") {
     super(message);
     this.status = status;
+    this.statusText = statusText;
   }
 }
 
@@ -22,7 +24,8 @@ export async function call<T extends ClientResponse<unknown>>(request: Promise<T
   } catch (error) {
     if (!(error instanceof DetailedError)) throw error;
     const { data, statusText } = error.detail as { data?: { error?: string }; statusText: string };
-    throw new ApiError(error.statusCode as number, data?.error || statusText || `Request failed (${error.statusCode})`);
+    const status = error.statusCode as number;
+    throw new ApiError(status, data?.error || statusText || `Request failed (${status})`, statusText);
   }
 }
 
