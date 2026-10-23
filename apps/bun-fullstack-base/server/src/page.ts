@@ -2,8 +2,16 @@ import type { HTMLBundle } from "bun";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-/** Hashed files change name when their content does, so browsers may keep them; other files are checked every time. */
+/**
+ * Hashed files change name when their content does, so browsers (and CDNs, public) keep them a year (31536000 s)
+ * without asking again, even on reload (immutable): a deploy gives them new names, which the new index.html links.
+ */
 const HASHED = "public, max-age=31536000, immutable";
+
+/**
+ * index.html and public/ keep their names across deploys, so browsers keep a copy but check it before each use (with
+ * the ETag, answered 304 when unchanged): a deploy shows at once. no-store is the one that doesn't keep a copy.
+ */
 const REVALIDATE = "no-cache";
 
 /**
