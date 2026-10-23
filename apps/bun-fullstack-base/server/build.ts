@@ -1,6 +1,5 @@
 import tailwind from "bun-plugin-tailwind";
 import { cp, rm } from "node:fs/promises";
-import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
@@ -12,8 +11,8 @@ import { fileURLToPath } from "node:url";
  * - The built server finds those files from its working directory: run it from dist/ (`bun run start` does).
  * - The web app's public/ is copied as is, for page.ts to answer its files at their own paths, and the API's
  *   migrations into dist/drizzle/, where core/db.ts finds them from the bundled server, to apply at start.
- * - Turso's native addon (the database's compiled Rust, for this machine's platform) can't be bundled: it's copied
- *   next to the bundled server, where Turso's loader looks first. Build on the platform the server runs on.
+ * - The database is SQLite from Bun itself (bun:sqlite), so dist/ has no addon to carry or load, and it builds for
+ *   any platform Bun does.
  * - NODE_ENV is inlined, which turns off the dev server in server.ts and gives React's production build.
  */
 export const buildOptions = {
@@ -26,15 +25,6 @@ export const buildOptions = {
   publicPath: "/",
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
 } satisfies Bun.BuildConfig;
-
-/** Copies Turso's native addon (turso.<platform>.node, wherever bun install put it) into a folder. */
-async function copyTursoAddon(dir: string) {
-  const glob = new Bun.Glob("**/turso.*.node");
-  const nodeModules = fileURLToPath(new URL("../node_modules", import.meta.url));
-  for await (const addon of glob.scan({ cwd: nodeModules, absolute: true, dot: true })) {
-    await cp(addon, join(dir, basename(addon)));
-  }
-}
 
 /** The page's text files, which get a gzip copy; the server's own code (dist/server/) and source maps don't. */
 const COMPRESSIBLE = /\.(html|js|css|svg|txt|xml|json)$/;
@@ -53,7 +43,6 @@ if (import.meta.main) {
   const publicDir = `${outdir}/apps/web/public`;
   await cp(fileURLToPath(new URL("../apps/web/public", import.meta.url)), publicDir, { recursive: true });
   await cp(fileURLToPath(new URL("../apps/api/drizzle", import.meta.url)), `${outdir}/drizzle`, { recursive: true });
-  await copyTursoAddon(`${outdir}/server/src`);
   const publicFiles = await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: publicDir, absolute: true, dot: true }));
   const pageFiles = [...result.outputs.map((output) => output.path), ...publicFiles].filter(
     (path) => COMPRESSIBLE.test(path) && !path.startsWith(`${outdir}/server/`),

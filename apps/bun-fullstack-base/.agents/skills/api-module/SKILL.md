@@ -51,7 +51,8 @@ Replace `books`/`Book` with the module's name. Paths in routes are written witho
    this module's service queries its tables, through `db` from `@api/core/db.ts`. A domain failure throws
    `HTTPException` with a 4xx status; `core/errors.ts` turns it into `{ error: message }`. A query that runs on most
    requests is prepared once at the top of the service (`sql.placeholder`, `.prepare()`), as in
-   `modules/notes/notes.service.ts`; values a column's `$defaultFn` would fill go in as placeholders too.
+   `modules/notes/notes.service.ts`; values a column's `$defaultFn` would fill go in as placeholders too. The driver
+   is synchronous (`bun:sqlite`): the queries return their rows, so there's no `await` and no `async`.
 
    ```ts
    import { eq } from "drizzle-orm";
@@ -61,8 +62,8 @@ Replace `books`/`Book` with the module's name. Paths in routes are written witho
 
    import { books } from "./books.table.ts";
 
-   export async function findBook(id: number) {
-     const [book] = await db.select().from(books).where(eq(books.id, id));
+   export function findBook(id: number) {
+     const [book] = db.select().from(books).where(eq(books.id, id)).all();
      if (!book) throw new HTTPException(404, { message: "No such book" });
      return book;
    }
@@ -92,9 +93,7 @@ Replace `books`/`Book` with the module's name. Paths in routes are written witho
      },
    });
 
-   export const booksRoutes = createRouter().openapi(getBook, async (c) =>
-     c.json(await findBook(c.req.valid("param").id), 200),
-   );
+   export const booksRoutes = createRouter().openapi(getBook, (c) => c.json(findBook(c.req.valid("param").id), 200));
    ```
 
    More endpoints in the same module: see the `api-endpoint` skill.

@@ -21,7 +21,7 @@ src/
 │                    then each module's router; exports AppType
 ├── client.ts        what the web app imports (api/client): Hono's typed client and AppType
 ├── core/            shared by every module, knows no feature
-│   ├── db.ts        db: the database (Turso, through Drizzle), migrated at start
+│   ├── db.ts        db: the database (SQLite from Bun, through Drizzle), migrated at start
 │   ├── errors.ts    notFound, onError: every error answers { error }
 │   ├── logger.ts    requestLogger(): one line per request, once answered
 │   ├── openapi.ts   createRouter(), ErrorSchema
@@ -71,19 +71,21 @@ A response a middleware built (like `basicAuth`'s 401) passes through as is; `Ap
 
 ## Database
 
-[Turso](https://github.com/tursodatabase/turso), SQLite rewritten in Rust, runs in the API's process on one file,
-with [Drizzle](https://orm.drizzle.team) for typed queries (`drizzle-orm/tursodatabase/database`).
+SQLite, the copy inside Bun (`bun:sqlite`, no addon to build or load), runs in the API's process on one file,
+with [Drizzle](https://orm.drizzle.team) for typed queries (`drizzle-orm/bun-sqlite`). Its queries are synchronous:
+Drizzle's `.all()` returns the rows, and the services are plain functions.
 
 - **Tables** belong to their module, in `<module>.table.ts`; only that module's service queries them. Another
   module asks through the service, as with everything else.
-- **Settings** (`core/db.ts`): `synchronous = NORMAL` (a power cut can lose the last commits, never the file),
-  foreign keys enforced (`.references()` holds), and `require_where`: an `UPDATE` or `DELETE` without a `WHERE`
-  fails, so write ``.where(sql`true`)`` when every row is meant.
+- **Settings** (`core/db.ts`): the WAL journal (readers don't wait for the writer), `synchronous = NORMAL` (a power
+  cut can lose the last commits, never the file), and foreign keys enforced (`.references()` holds). Turso had a
+  `require_where` that refused an `UPDATE` or `DELETE` without a `WHERE`; SQLite has none, so what's left is
+  Drizzle's API, where an update or delete without `.where()` is unusual to write in the first place.
 - **Prepared queries** for the ones that run on most requests: built once at the top of the service with
   `sql.placeholder(…)` for the values and `.prepare()`, so the database parses and plans them once, not per request
-  (`notes.service.ts`: about twice the requests a second). Only the values can change between calls, and a column's
-  `$defaultFn` runs once, when preparing: pass such values (like `createdAt`) as placeholders. Rare or
-  variable-shape queries stay plain Drizzle chains.
+  (`notes.service.ts`: half again to nearly twice the requests a second, measured in the process). Only the values
+  can change between calls, and a column's `$defaultFn` runs once, when preparing: pass such values (like
+  `createdAt`) as placeholders. Rare or variable-shape queries stay plain Drizzle chains.
 - **Migrations**: after changing a table, `bun run db:generate` writes the SQL into `drizzle/`; commit it. The
   server applies the ones not yet applied when it starts (`core/db.ts`), in dev and in production, so there's no
   separate step. A migration is never edited once it's run somewhere: change the table and generate another.
@@ -93,8 +95,8 @@ with [Drizzle](https://orm.drizzle.team) for typed queries (`drizzle-orm/tursoda
 - **One instance.** The file is the API's own: run one server per database. Back it up by copying the file and its
   `-wal` while the server is stopped.
 
-Drizzle 1.0 is still a release candidate (its Turso driver is new in 1.0), taken as `^1.0.0-rc.5`; Turso's
-JavaScript package is 0.x. Read the changelogs before updating either.
+Drizzle 1.0 is still a release candidate, taken as `^1.0.0-rc.5`, and its `bun-sqlite` driver is new in 1.0. Read
+the changelog before updating it.
 
 ## Rate limits
 
@@ -150,8 +152,8 @@ Say, `books`:
 
    import { books } from "./books.table.ts";
 
-   export async function findBook(id: number) {
-     const [book] = await db.select().from(books).where(eq(books.id, id));
+   export function findBook(id: number) {
+     const [book] = db.select().from(books).where(eq(books.id, id)).all();
      if (!book) throw new HTTPException(404, { message: "No such book" });
      return book;
    }
@@ -194,9 +196,7 @@ Say, `books`:
      },
    });
 
-   export const booksRoutes = createRouter().openapi(getBook, async (c) =>
-     c.json(await findBook(c.req.valid("param").id), 200),
-   );
+   export const booksRoutes = createRouter().openapi(getBook, (c) => c.json(findBook(c.req.valid("param").id), 200));
    ```
 
    Use `createRouter()`, not `new OpenAPIHono()` or `new Hono()`: a bare `OpenAPIHono` answers invalid input with

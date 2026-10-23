@@ -8,7 +8,7 @@ validate requests, make up its OpenAPI document and type the web app's client, s
 | ------- | ----------------------------------------------------------------------------------------------------- |
 | Server  | [Bun](https://bun.com) 1.4: `Bun.serve` runs the API and serves the web app, which Bun bundles        |
 | API     | [Hono](https://hono.dev) with [Zod OpenAPI](https://hono.dev/examples/zod-openapi), by feature module |
-| DB      | [Turso](https://github.com/tursodatabase/turso) (SQLite in Rust) in the process, through Drizzle      |
+| DB      | SQLite, the copy inside Bun (`bun:sqlite`), in the process, through Drizzle                           |
 | Web     | React 19, React Router, TanStack Query, Tailwind CSS 4, shadcn/ui                                     |
 | Tooling | [Vite+](https://viteplus.dev) (`vp`): format, lint, type-check, and tests (web in headless Chromium)  |
 
@@ -100,13 +100,15 @@ docker build -t bun-fullstack-base .
 docker run --rm -p 3000:3000 -v app-data:/data bun-fullstack-base   # settings with -e PORT=… or --env-file .env
 ```
 
-The image (on `oven/bun:1.4.3`, the Bun that `packageManager` pins) is built in two stages on Debian slim. The first
-installs the dependencies and runs `bun run build`; the second keeps only `server/dist/` (a few MB, with the
-migrations and Turso's native addon, no `node_modules`) and runs it as the `bun` user, about 290 MB in all. It isn't
-on Alpine, which would save about 110 MB, because Turso has no build for musl. The database lives in the `/data`
-volume: mount one there, or it's lost with the container. The addon is for the CPU the image is built for, so build
-it for the one it runs on (`docker build --platform`). Checks and tests run outside it. Its
-`HEALTHCHECK` calls `/api/health` every 30 s, so Docker can tell when the server stops answering.
+The image (on `oven/bun:1.4.3`, the Bun that `packageManager` pins) is built in two stages. The first, on
+`oven/bun:1.4.3-slim` (Debian), installs the dependencies and runs `bun run build`; the second, on
+`oven/bun:1.4.3-alpine`, keeps only `server/dist/` (a few MB, with the migrations, no `node_modules`) and runs it as
+the `bun` user, about 150 MB in all (about 50 MB to pull, Alpine's busybox shell there for `docker exec`). Alpine is
+fine because nothing native is loaded: SQLite is the copy inside Bun, there's no addon to build for the CPU the image
+runs on, and the build stage's output is plain JavaScript. A native module added later needs a musl build, or that
+stage goes back to `-slim`. The database lives in the `/data` volume: mount one there, or it's lost with the container.
+Checks and tests run outside it. Its `HEALTHCHECK` calls `/api/health` every 30 s, so Docker can tell when the server
+stops answering.
 
 Don't expose the image on its own: put a reverse proxy (Caddy, nginx, your platform's) in front. It terminates TLS,
 compresses the API's responses (the page's files come compressed already), and sets security headers on the page

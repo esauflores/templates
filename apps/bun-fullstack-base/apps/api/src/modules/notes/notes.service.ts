@@ -7,7 +7,8 @@ import { notes } from "./notes.table.ts";
 
 /**
  * A page's query, prepared once: SQLite parses and plans it here, not on every request, which more than doubles the
- * pages a second. It reads one note past the limit, to tell whether there's a next page.
+ * pages a second. It reads one note past the limit, to tell whether there's a next page. bun:sqlite is synchronous,
+ * so the statement returns its rows at once: the call blocks the process for the query's length, not a round trip.
  */
 const pageQuery = db
   .select()
@@ -21,8 +22,8 @@ const pageQuery = db
  * A page of notes, newest first: the `limit` notes older than `before` (a note's id), or the newest. `next` is the
  * `before` for the page after, null on the last. Paging by id, not by offset, keeps pages steady as notes are added.
  */
-export async function listNotes({ limit, before }: { limit: number; before?: number }) {
-  const rows = await pageQuery.all({ before: before ?? Number.MAX_SAFE_INTEGER, limit: limit + 1 });
+export function listNotes({ limit, before }: { limit: number; before?: number }) {
+  const rows = pageQuery.all({ before: before ?? Number.MAX_SAFE_INTEGER, limit: limit + 1 });
   const page = rows.slice(0, limit);
   return { notes: page, next: rows.length > limit ? page.at(-1)!.id : null };
 }
@@ -37,8 +38,8 @@ const insertQuery = db
   .returning()
   .prepare();
 
-export async function addNote(text: string) {
-  const [note] = await insertQuery.all({ text, createdAt: new Date().toISOString() });
+export function addNote(text: string) {
+  const [note] = insertQuery.all({ text, createdAt: new Date().toISOString() });
   return note!;
 }
 
@@ -50,8 +51,8 @@ const updateQuery = db
   .returning()
   .prepare();
 
-export async function updateNote(id: number, text: string) {
-  const [note] = await updateQuery.all({ id, text });
+export function updateNote(id: number, text: string) {
+  const [note] = updateQuery.all({ id, text });
   if (!note) throw new HTTPException(404, { message: "No such note" });
   return note;
 }

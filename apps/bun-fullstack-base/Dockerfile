@@ -1,7 +1,8 @@
 # Two stages: the first installs everything and runs the production build (server/build.ts), the second keeps only
-# server/dist, which holds the server, the API and the page already bundled (and compressed), the migrations and
-# Turso's native addon, so it needs no node_modules. Both run on Debian slim: the addon is built for glibc, and Turso
-# has no build for Alpine's musl.
+# server/dist, which holds the server, the API and the page already bundled (and compressed) and the migrations, so
+# it needs no node_modules: the database is SQLite from Bun itself, with no addon to build for a platform. That's why
+# the second stage can be Alpine (musl), about 110 MB smaller than the Debian slim one; the build stage stays on
+# Debian, where the dependencies and the bundler's plugins are installed for, and its dist is plain JavaScript.
 FROM oven/bun:1.4.3-slim AS build
 
 WORKDIR /app
@@ -17,7 +18,7 @@ RUN bun install --frozen-lockfile --omit=peer
 COPY . .
 RUN bun run build
 
-FROM oven/bun:1.4.3-slim
+FROM oven/bun:1.4.3-alpine
 
 # The built server finds the page's files from its working directory, so it runs from the build's output. Settings
 # come from docker run's -e or --env-file, not from a .env in the image.

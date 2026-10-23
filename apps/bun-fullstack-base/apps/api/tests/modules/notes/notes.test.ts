@@ -13,20 +13,20 @@ const post = (body: unknown) =>
 
 describe("notes", () => {
   it("saves a note and lists it first", async () => {
-    const note = await addNote("First");
-    await addNote("Second");
+    const note = addNote("First");
+    addNote("Second");
 
     expect(note).toEqual({ id: expect.any(Number), text: "First", createdAt: expect.any(String) });
-    expect((await listNotes({ limit: 2 })).notes.map((n) => n.text)).toEqual(["Second", "First"]);
+    expect(listNotes({ limit: 2 }).notes.map((n) => n.text)).toEqual(["Second", "First"]);
   });
 
   it("pages through every note once, newest first, and ends with no next", async () => {
     const added: number[] = [];
-    for (let i = 0; i < 5; i++) added.push((await addNote(`Note ${i}`)).id);
+    for (let i = 0; i < 5; i++) added.push(addNote(`Note ${i}`).id);
     const seen: number[] = [];
     let before: number | undefined;
     do {
-      const page = await listNotes({ limit: 2, before });
+      const page = listNotes({ limit: 2, before });
       seen.push(...page.notes.map((n) => n.id));
       before = page.next ?? undefined;
     } while (before !== undefined);
@@ -38,7 +38,7 @@ describe("notes", () => {
 
 describe("GET /api/notes", () => {
   it("answers a page and the cursor for the next", async () => {
-    for (let i = 0; i < 3; i++) await addNote(`Note ${i}`);
+    for (let i = 0; i < 3; i++) addNote(`Note ${i}`);
     const response = await createApp().request("/api/notes?limit=2");
     const page = (await response.json()) as { notes: { id: number }[]; next: number | null };
 
@@ -64,7 +64,7 @@ describe("PATCH /api/notes/{id}", () => {
     });
 
   it("changes the text and answers the note, keeping its id and time", async () => {
-    const note = await addNote("Draft");
+    const note = addNote("Draft");
     const response = await patch(note.id, { text: " Final " });
 
     expect(response.status).toBe(200);
@@ -79,7 +79,7 @@ describe("PATCH /api/notes/{id}", () => {
   });
 
   it("rejects an id that isn't a positive number, and an empty text, with a 400", async () => {
-    const note = await addNote("Draft");
+    const note = addNote("Draft");
 
     expect((await patch("abc", { text: "Final" })).status).toBe(400);
     expect((await patch(note.id, { text: "" })).status).toBe(400);

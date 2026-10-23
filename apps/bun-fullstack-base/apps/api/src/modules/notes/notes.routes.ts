@@ -43,6 +43,6 @@ const update = createRoute({
 });
 
 export const notesRoutes = createRouter()
-  .openapi(list, async (c) => c.json(await listNotes(c.req.valid("query")), 200))
-  .openapi(add, async (c) => c.json(await addNote(c.req.valid("json").text), 201))
-  .openapi(update, async (c) => c.json(await updateNote(c.req.valid("param").id, c.req.valid("json").text), 200));
+  .openapi(list, (c) => c.json(listNotes(c.req.valid("query")), 200))
+  .openapi(add, (c) => c.json(addNote(c.req.valid("json").text), 201))
+  .openapi(update, (c) => c.json(updateNote(c.req.valid("param").id, c.req.valid("json").text), 200));

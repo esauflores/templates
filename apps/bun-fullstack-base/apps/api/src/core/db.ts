@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/tursodatabase/database";
-import { migrate } from "drizzle-orm/tursodatabase/migrator";
+import { drizzle } from "drizzle-orm/bun-sqlite";
+import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,21 +20,21 @@ const migrationsFolder = fileURLToPath(new URL("../../drizzle", import.meta.url)
 if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
 
 /**
- * The database: [Turso](https://github.com/tursodatabase/turso), SQLite rewritten in Rust, in the process, with
- * Drizzle's typed queries. Each module declares its tables in `<module>.table.ts`. The migrations not yet applied
- * run once, the first time this file is imported, so the server starts on the current tables.
- * - Turso always journals to a WAL (app.db-wal): reads don't wait for writes.
+ * The database: SQLite, the copy inside Bun (bun:sqlite, no addon to install or load), in the process, with Drizzle's
+ * typed queries, which are synchronous: a query blocks the process for its length, there's no round trip to wait on.
+ * Each module declares its tables in `<module>.table.ts`. The migrations not yet applied run once, the first time
+ * this file is imported, so the server starts on the current tables.
+ * - journal_mode = WAL journals next to the file (app.db-wal): readers don't wait for the writer.
  * - synchronous = NORMAL syncs the disk at checkpoints, not on every commit: about 40 times the writes a second of
  *   FULL, and faster than OFF, which risks the file. A crash of the process loses nothing; a power cut can lose the
  *   last commits, never the file.
  * - foreign_keys = ON makes a column's `.references()` hold: a row can't point at one that doesn't exist (off by
- *   default, as in SQLite).
- * - require_where = ON refuses an UPDATE or DELETE without a WHERE, so a missing filter can't change every row;
- *   write `WHERE true` (in Drizzle, .where(sql`true`)) when that's meant.
+ *   default). SQLite has no `require_where`, which Turso's build added: an UPDATE or DELETE without a WHERE is a
+ *   mistake Drizzle's own API mostly rules out, but the engine no longer refuses one.
  */
 export const db = drizzle(path);
 
-await db.run(sql`PRAGMA synchronous = NORMAL`);
-await db.run(sql`PRAGMA foreign_keys = ON`);
-await db.run(sql`PRAGMA require_where = ON`);
-await migrate(db, { migrationsFolder });
+db.run(sql`PRAGMA journal_mode = WAL`);
+db.run(sql`PRAGMA synchronous = NORMAL`);
+db.run(sql`PRAGMA foreign_keys = ON`);
+migrate(db, { migrationsFolder });

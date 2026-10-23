@@ -13,7 +13,7 @@ import { notes } from "@api/modules/notes/notes.table.ts";
  */
 vi.stubEnv("RATE_LIMIT", "0");
 vi.spyOn(console, "log").mockImplementation(() => {});
-for (let i = 1; i <= 50; i++) await addNote(`Note number ${i}, a line of text`);
+for (let i = 1; i <= 50; i++) addNote(`Note number ${i}, a line of text`);
 
 const app = createApp();
 

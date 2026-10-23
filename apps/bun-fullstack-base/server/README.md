@@ -10,8 +10,8 @@ path, on one port. It isn't an app of its own: it imports both by their workspac
 src/
 ├── server.ts       Bun.serve: the routes, the port, graceful shutdown on SIGTERM and SIGINT
 └── page.ts         pageRoutes(): the web app's routes (the page and public/), as Bun bundles them (dev) or as built
-build.ts            the production build into dist/, copies of web's public/, the API's migrations and Turso's
-                    native addon, and the gzip copies of the page's files
+build.ts            the production build into dist/, copies of web's public/ and the API's migrations, and the
+                    gzip copies of the page's files
 bunfig.toml         Tailwind as Bun's bundler plugin, for dev
 tests/
 ├── build.test.ts   runs the production build: the page is there and its CSS went through Tailwind
@@ -25,9 +25,8 @@ tests/
 - **Build** (`bun run build`): `build.ts` bundles `server.ts` with everything it imports, the API and the page
   included, minified, into `dist/`, which mirrors the repo (`dist/server/src/server.js`,
   `dist/apps/web/index.html`, the page's hashed JS and CSS). Each of the page's files gets a gzip copy (level 9,
-  kept when smaller). A broken import fails here, not on a request. The API's migrations are copied in, and Turso's
-  native addon (`turso.<platform>.node`) next to `server.js`, as it can't be bundled: `dist/` runs without
-  `node_modules`, on the platform it was built on.
+  kept when smaller). A broken import fails here, not on a request. The API's migrations are copied in, so `dist/`
+  runs without `node_modules`; the database needs nothing else, as it's the SQLite inside Bun.
 - **Production** (`bun run start`): runs `dist/server/src/server.js` from `dist/`, as the built server finds the
   page's files from its working directory. `page.ts` reads them once at start and answers each with one fixed
   response, from memory:
@@ -57,47 +56,41 @@ fresh database of 50 notes.
 
 |                                 | Built (`dist/`)                       |
 | ------------------------------- | ------------------------------------- |
-| Ready to answer                 | 57 ms [56–81], each on a new database |
+| Ready to answer                 | 55 ms [52–57], each on a new database |
 | First page request              | 0.2 ms                                |
-| Memory, started / loaded        | 55 / 78 MB RSS, own 17 / 35 MB        |
-| `/` (index.html)                | 281k req/s [281–284k], p99 0.7 ms     |
-| JS bundle (105 KB gzipped)      | 77k req/s [77–77k], p99 2.5 ms        |
-| `/api/hello/{name}`             | 70k req/s [69–70k], p99 3.3 ms        |
-| `GET /api/notes` (a page of 20) | 25k req/s [25–25k], p99 9.2 ms        |
-| `POST /api/notes`               | 11.7k req/s [11.6–11.7k], p99 17 ms   |
-| `PATCH /api/notes/{id}`         | 13.5k req/s [13.5–13.5k], p99 16 ms   |
+| Memory, started / loaded        | 50 / 65 MB RSS, own 12 / 26 MB        |
+| `/` (index.html)                | 267k req/s [262–269k], p99 0.8 ms     |
+| JS bundle (105 KB gzipped)      | 70k req/s [67–70k], p99 2.8 ms        |
+| `/api/hello/{name}`             | 65k req/s [63–65k], p99 3.6 ms        |
+| `GET /api/notes` (a page of 20) | 24k req/s [23–24k], p99 9.6 ms        |
+| `POST /api/notes`               | 27k req/s [26–27k], p99 8.4 ms        |
+| `PATCH /api/notes/{id}`         | 29k req/s [29–30k], p99 8.3 ms        |
 
 - The page is bundled ahead of time, so the first request is answered at once, from memory: the bundler and
   Tailwind aren't loaded at runtime.
-- Most of the memory is Bun's own executable (27 MB of it in memory) and Turso's addon (10 MB of its 19 MB), mapped
-  from disk: shared between instances, and given back to the kernel when it needs it (`docker stats` leaves it out).
-  The server's own memory is 17 MB idle (Hono, Zod, the OpenAPI schemas, the page's files, the database's engine) and 35 MB under load (connection
-  buffers, compiled code). Bun's `--smol` and smaller GC settings didn't lower it.
-- The database added about 22 ms to the start (opening it and checking the migrations; 70 ms on the very first,
-  which creates the tables) and about 20 MB idle, measured the same way against the build before it: 10 MB is
-  Turso's addon, 3 MB more of Bun's executable in use, and 7 MB the server's own, 2 MB of it JavaScript (Drizzle,
-  Turso's driver, the notes module) and the rest Turso's engine. Under load the server's own memory grew 12 MB
-  more than before, on `/api/hello`, which doesn't touch the database: not pinned down.
-- On the database routes the query is most of the time, and it grows with the rows: about 1 µs a note, turning
-  Turso's rows into Drizzle's objects. Hence pages of 20 by default.
-- Two settings in the API more than double the database routes, measured against the same routes without (rate
-  limit on): the page's query is prepared once (`notes.service.ts`), 5.9k to 11k pages of 50 a second; and
-  `synchronous = NORMAL` (`core/db.ts`) syncs the disk at checkpoints rather than on each commit, 310 to 4.9k writes
-  a second, with p99 down from 1.7 s to 45 ms. A bigger page cache made no difference.
-- The insert and the update are prepared once too: the insert went from 4.7k to 7.0k notes a second (6 rounds each,
-  alternating, no rate limit). Writes vary more between rounds than reads. The update (always note 25 here) rewrites
-  one row, while the insert adds one.
-- Memory after writing: one run reached 138 MB RSS, 94 MB its own, after 24k notes in 5 s; later runs, after about
-  37k, stayed at 73–82 MB. Not looked into further.
+- Most of the memory is Bun's own executable (about 24 MB of it in memory), mapped from disk: shared between
+  instances, and given back to the kernel when it needs it (`docker stats` leaves it out). The server's own memory is
+  12 MB idle (Hono, Zod, the OpenAPI schemas, the page's files, the database's engine) and 26 MB under load
+  (connection buffers, compiled code). Bun's `--smol` and smaller GC settings didn't lower it.
+- The database is SQLite inside Bun's own executable (`bun:sqlite`), so there's no addon to map and nothing platform
+  specific in `server/dist/`. Opening the file and checking the migrations takes a few of the 55 ms above, and the
+  engine's memory is part of the server's own, above.
+- On the database routes the query is most of the time, and it grows with the rows, turning SQLite's rows into
+  Drizzle's objects (`bench/api.bench.ts` measures the queries in the process). Hence pages of 20 by default.
+- Two things raise the database routes by half again or more, measured in the process: the page's query and the
+  insert are prepared once (`notes.service.ts`), 52k to 79k pages a second and 135k to 233k inserts; and
+  `synchronous = NORMAL` (`core/db.ts`) syncs the disk at checkpoints rather than on each commit, which is what keeps
+  the writes above in the tens of thousands a second rather than a few hundred.
+- Writes vary more between rounds than reads. The update (always note 25 here) rewrites one row, while the insert
+  adds one.
 - The request logger is the API's biggest cost after the database: about half of `/api/hello`'s time in the process.
   Writing one line per request once answered (`core/logger.ts`), instead of Hono's `logger()` in an `except()` (two
   lines), took `/api/hello` from 49k to 61k req/s, `GET /api/notes` from 19k to 22k and `POST` from 7.5k to 8.5k (6
-  rounds each, alternating). Of the rest, `secureHeaders()` costs about 3 µs a request and the body limit 1.5 µs;
-  Drizzle's row mapping costs nothing measurable against Turso's own.
-- One core tops out around 70k requests a second on the API and 280k on the HTML, far beyond what one instance
-  usually sees. It's one process per database: Turso locks the file to the process that opened it, so a second
-  instance on the same file fails at start. (Turso's experimental `multiprocess_wal` lifts that: two processes
-  read 1.9 times and write 1.3 times as much, measured, but it isn't on here.)
+  rounds each, alternating, measured before the database change). Of the rest, `secureHeaders()` costs about 3 µs a
+  request and the body limit 1.5 µs; Drizzle's row mapping costs nothing measurable against SQLite's own.
+- One core tops out around 65k requests a second on the API and 265k on the HTML, far beyond what one instance
+  usually sees. It's one process per database: SQLite serializes the file's writers, so a second instance on the same
+  file waits on its locks instead of answering alongside the first.
 - On a power-saving profile the core runs at about a third of its clock and every number drops by half or more.
 
 To rerun it, `bun run bench` (needs oha): it builds, then prints the table's rows. Numbers vary between machines.
