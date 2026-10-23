@@ -61,6 +61,10 @@ For a new module, use the `api-module` skill instead. Rules and request flow are
    Don't register it in a separate statement (`booksRoutes.openapi(…)` on its own line): it works at runtime but is
    missing from the web app's client types. Nothing changes in `app.ts`; the module is already mounted.
 
+   An endpoint worth abusing (a login, a sign-up, one that sends email) also gets a stricter rate limit, in the
+   chain before its route: `.use("/books/import", rateLimit({ limit: 5, windowMs: 60_000 }))`, with `rateLimit` from
+   `@api/core/rate-limit.ts`. Added after the route, it never runs. See "Rate limits" in `apps/api/README.md`.
+
 5. **Tests** in `apps/api/tests/modules/<module>/`: the success status and body, each declared error, and a 400 for
    invalid input. A JSON body needs its content type:
 

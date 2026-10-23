@@ -23,6 +23,10 @@ FROM oven/bun:1.4.3-alpine
 WORKDIR /app
 COPY --from=build /app/server/dist ./
 
+# The image runs behind a reverse proxy (see the README), so the API's rate limit counts the client IP the proxy adds
+# to X-Forwarded-For, not the proxy's. Override with -e TRUST_PROXY=false when nothing is in front.
+ENV TRUST_PROXY=true
+
 USER bun
 EXPOSE 3000
 CMD ["bun", "server/src/server.js"]

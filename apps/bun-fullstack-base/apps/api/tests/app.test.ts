@@ -19,6 +19,13 @@ describe("app", () => {
     expect(Object.keys(doc.paths)).toContain("/api/hello/{name}");
   });
 
+  it("rate-limits the API, but not the health check", async () => {
+    const app = createApp();
+
+    expect((await app.request("/api/hello/world")).headers.get("RateLimit-Limit")).toBe("300");
+    expect((await app.request("/api/health")).headers.get("RateLimit-Limit")).toBeNull();
+  });
+
   it("answers JSON for an unmatched route", async () => {
     const response = await createApp().request("/api/missing");
 

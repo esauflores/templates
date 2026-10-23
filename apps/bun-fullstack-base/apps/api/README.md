@@ -18,7 +18,8 @@ src/
 │                    then each module's router; exports AppType
 ├── core/            shared by every module, knows no feature
 │   ├── errors.ts    notFound, onError: every error answers { error }
-│   └── openapi.ts   createRouter(), ErrorSchema
+│   ├── openapi.ts   createRouter(), ErrorSchema
+│   └── rate-limit.ts  rateLimit(): requests per client IP, 429 { error } past the limit
 └── modules/
     └── <module>/
         ├── <module>.routes.ts    HTTP only: route definitions and thin handlers
@@ -45,7 +46,7 @@ tests/
 
 1. The server (`server/src/server.ts`) sends `/api` and `/api/*` to `createApp().fetch`. The app's base path is
    `/api`, so routes are written without it (`/hello/{name}` answers `/api/hello/{name}`).
-2. `secureHeaders()` runs, then the module route that matches.
+2. `secureHeaders()` runs, then the rate limit (see below), then the module route that matches.
 3. Zod checks params, query and body against the route's schemas. Invalid input answers `400 { error }`
    with Zod's readable message; the handler doesn't run.
 4. Errors end in `core/errors.ts`: an `HTTPException` below 500 answers `{ error: message }` (or the response a
@@ -55,6 +56,29 @@ tests/
 
 Every error body the API builds is `{ error: string }` (`ErrorSchema`), which the web app reads into `ApiError`.
 A response a middleware built (like `basicAuth`'s 401) passes through as is; `ApiError` then carries its status text.
+
+## Rate limits
+
+Every client gets 300 requests a minute across `/api` (`/api/health` isn't counted), set in `app.ts`. Past it, a
+request answers `429 { error }` with `Retry-After`, and the web app shows that message (its query client doesn't
+retry a 4xx). Every answer carries `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset`.
+
+A route that's worth abusing (a login, a sign-up, an email) adds a stricter limit of its own, on top, in its
+module's chain and before the route: Hono runs middleware in the order it's added, so one added after the route
+never runs.
+
+```ts
+export const booksRoutes = createRouter()
+  .use("/books/import", rateLimit({ limit: 5, windowMs: 60_000 }))
+  .openapi(importBooks, (c) => c.json(importFromFile(c.req.valid("json")), 200));
+```
+
+- Clients are told apart by IP (`clientIp` in `core/rate-limit.ts`). Behind a reverse proxy, set `TRUST_PROXY=true`
+  (the Docker image does) so it reads the client's IP from `X-Forwarded-For`; without it every request looks like
+  the proxy's and all clients share one limit. Never set it without a proxy: clients can send that header.
+- The counts live in the process's memory, so they reset on restart and each instance counts on its own. With
+  several instances, pass a shared `store` (`RedisStore` from
+  [hono-rate-limiter](https://github.com/rhinobase/hono-rate-limiter), on Valkey or Redis).
 
 ## Adding a module
 

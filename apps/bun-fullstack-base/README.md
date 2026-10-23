@@ -103,6 +103,8 @@ dependencies and runs `bun run build` on Debian slim; the second keeps only `ser
 Don't expose the image on its own: put a reverse proxy (Caddy, nginx, your platform's) in front. It terminates TLS,
 compresses the API's responses (the page's files come compressed already), and sets security headers on the page
 (CSP, `frame-ancestors`, `X-Content-Type-Options`), which the app doesn't: `secureHeaders()` only covers `/api`.
+The image sets `TRUST_PROXY=true`, so the API's rate limit counts each client by the IP the proxy puts in
+`X-Forwarded-For` (see [`apps/api/README.md`](apps/api/README.md#rate-limits)).
 
 ## Conventions
 
