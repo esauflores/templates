@@ -4,14 +4,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
+import { compress } from "../build.ts";
 import { pageRoutes } from "../src/page.ts";
+
+const JS = "console.log('hello');\n".repeat(50);
 
 let dir = "";
 
-/** A page as build.ts outputs it: files in a folder, listed with the headers Bun computed for them. */
+/** A page as build.ts outputs it: files in a folder, gzipped, listed with the headers Bun computed for them. */
 async function builtPage(files: Record<string, string>): Promise<HTMLBundle> {
   dir = await mkdtemp(join(tmpdir(), "page-"));
-  for (const [name, body] of Object.entries(files)) await Bun.write(join(dir, name), body);
+  for (const [name, body] of Object.entries(files)) {
+    await Bun.write(join(dir, name), body);
+    await compress(join(dir, name));
+  }
   return {
     index: join(dir, "index.html"),
     files: Object.keys(files).map((name) => ({
@@ -23,6 +29,11 @@ async function builtPage(files: Record<string, string>): Promise<HTMLBundle> {
   };
 }
 
+/** The route answering a path, matched by the end of its pattern. */
+function route(routes: Awaited<ReturnType<typeof pageRoutes>>, path: string) {
+  return Object.entries(routes).find(([pattern]) => pattern.endsWith(path))?.[1] as Response;
+}
+
 afterEach(() => rm(dir, { recursive: true, force: true }));
 
 describe("pageRoutes", () => {
@@ -32,18 +43,19 @@ describe("pageRoutes", () => {
     expect(await pageRoutes(page)).toEqual({ "/*": page });
   });
 
-  it("answers a built page's files from memory, with cache headers", async () => {
-    const page = await builtPage({ "index.html": "<html></html>", "chunk-abc.js": "console.log(1)" });
-    const routes = await pageRoutes(page);
+  it("answers a built page's files from memory, gzipped when that's smaller, with cache headers", async () => {
+    const routes = await pageRoutes(await builtPage({ "index.html": "<html></html>", "chunk-abc.js": JS }));
     await rm(dir, { recursive: true });
 
-    const html = routes["/*"] as Response;
+    const html = route(routes, "/*");
     expect(await html.text()).toBe("<html></html>");
+    expect(html.headers.get("content-encoding")).toBeNull();
     expect(html.headers.get("cache-control")).toBe("no-cache");
     expect(html.headers.get("etag")).toBe('"index.html"');
 
-    const js = Object.entries(routes).find(([path]) => path.endsWith("/chunk-abc.js"))?.[1] as Response;
-    expect(await js.text()).toBe("console.log(1)");
+    const js = route(routes, "/chunk-abc.js");
+    expect(js.headers.get("content-encoding")).toBe("gzip");
+    expect(new TextDecoder().decode(Bun.gunzipSync(await js.arrayBuffer()))).toBe(JS);
     expect(js.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
   });
 });

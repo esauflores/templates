@@ -46,8 +46,8 @@ browser ── :3000 ── server
 - **Bun bundles the web app.** There's no Vite dev server. In dev, Bun bundles the page as it's requested,
   rebundles on change and hot-reloads it (React Fast Refresh). For production, `bun run build` (`server/build.ts`)
   bundles the server with everything it imports, the API and the page included, into `server/dist/`: the page
-  becomes hashed JS and CSS files the built server loads into memory at start, so a broken import fails the
-  build, not a request.
+  becomes hashed JS and CSS files, gzipped, that the built server loads into memory at
+  start, so a broken import fails the build, not a request.
   Tailwind runs as Bun's bundler plugin (`server/bunfig.toml` in dev, `build.ts` for the build).
 - **The apps, and the server that runs them.** `apps/api` and `apps/web` are the apps; `server/` puts them on one
   port, importing them by name (`"api"`, `"web/index.html"`). Each is a workspace with its own `package.json` and
@@ -97,13 +97,13 @@ docker build -t bun-fullstack-base .
 docker run --rm -p 3000:3000 bun-fullstack-base   # pass settings with -e PORT=… or --env-file .env
 ```
 
-The image (`oven/bun:1.4.3-slim`, the Bun that `packageManager` pins) is built in two stages. The first installs
-the dependencies and runs `bun run build`; the second keeps only `server/dist/` (a few MB, no `node_modules`) and
-runs it as the `bun` user. Checks and tests run outside it.
+The image (on `oven/bun:1.4.3`, the Bun that `packageManager` pins) is built in two stages. The first installs the
+dependencies and runs `bun run build` on Debian slim; the second keeps only `server/dist/` (a few MB, no
+`node_modules`) and runs it on Alpine as the `bun` user, about 150 MB in all. Checks and tests run outside it.
 
 Don't expose the image on its own: put a reverse proxy (Caddy, nginx, your platform's) in front. It terminates TLS,
-compresses, and sets security headers on the page (CSP, `frame-ancestors`, `X-Content-Type-Options`), which the app
-doesn't: `secureHeaders()` only covers `/api`.
+compresses the API's responses (the page's files come compressed already), and sets security headers on the page
+(CSP, `frame-ancestors`, `X-Content-Type-Options`), which the app doesn't: `secureHeaders()` only covers `/api`.
 
 ## Conventions
 

@@ -21,7 +21,22 @@ export const buildOptions = {
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
 } satisfies Bun.BuildConfig;
 
+/** The page's text files, which get a gzip copy; the server's own code (dist/server/) and source maps don't. */
+const COMPRESSIBLE = /\.(html|js|css|svg)$/;
+
+/** Writes a gzip copy next to a file (file.gz), at the highest level and only when it's smaller, for page.ts. */
+export async function compress(path: string) {
+  const body = await Bun.file(path).bytes();
+  const gzip = Bun.gzipSync(body, { level: 9 });
+  if (gzip.length < body.length) await Bun.write(`${path}.gz`, gzip);
+}
+
 if (import.meta.main) {
-  const result = await Bun.build({ ...buildOptions, outdir: fileURLToPath(new URL("./dist", import.meta.url)) });
-  console.log(`Built ${result.outputs.length} files into server/dist/`);
+  const outdir = fileURLToPath(new URL("./dist", import.meta.url));
+  const result = await Bun.build({ ...buildOptions, outdir });
+  const pageFiles = result.outputs
+    .map((output) => output.path)
+    .filter((path) => COMPRESSIBLE.test(path) && !path.startsWith(`${outdir}/server/`));
+  await Promise.all(pageFiles.map(compress));
+  console.log(`Built ${result.outputs.length} files into server/dist/, ${pageFiles.length} of them gzipped`);
 }

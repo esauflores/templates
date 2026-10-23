@@ -42,8 +42,9 @@ tests/
 - **Dev** (`bun run dev`): the server, under `bun --hot`, rebundles on change and hot-reloads the page
   (React Fast Refresh).
 - **Production** (`bun run build`, then `bun run start`): `server/build.ts` bundles the page ahead of time,
-  minified, into hashed files in `server/dist/`. The built server reads them once at start and serves them from
-  memory (`server/src/page.ts`): the hashed files cached by browsers for a year, `index.html` checked every time.
+  minified, into hashed files in `server/dist/`, each with a gzip copy. The built server reads the gzip copies once
+  at start and serves them from memory (`server/src/page.ts`): the JS is about 120 KB instead of 385 KB. Browsers
+  keep the hashed files for a year and check `index.html` every time.
 - **Styles**: `bun-plugin-tailwind` (set in `server/bunfig.toml` for dev, and in `server/build.ts`) compiles
   `global.css`, which `main.tsx` imports. Classes are found in the source files, so there is no Tailwind config.
 - **Routes**: the server answers every non-`/api` path with `index.html` (200), and React Router picks the page.

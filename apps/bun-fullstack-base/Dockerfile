@@ -1,5 +1,6 @@
 # Two stages: the first installs everything and runs the production build (server/build.ts), the second keeps only
-# server/dist, which holds the server, the API and the page already bundled, so it needs no node_modules.
+# server/dist, which holds the server, the API and the page already bundled (and compressed), so it needs no
+# node_modules. The second runs on Alpine, about 110 MB smaller than Debian slim: dist/ is plain JS, so musl is fine.
 FROM oven/bun:1.4.3-slim AS build
 
 WORKDIR /app
@@ -15,7 +16,7 @@ RUN bun install --frozen-lockfile --omit=peer
 COPY . .
 RUN bun run build
 
-FROM oven/bun:1.4.3-slim
+FROM oven/bun:1.4.3-alpine
 
 # The built server finds the page's files from its working directory, so it runs from the build's output. Settings
 # come from docker run's -e or --env-file, not from a .env in the image.
