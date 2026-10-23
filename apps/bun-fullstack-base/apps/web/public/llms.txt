@@ -7,5 +7,5 @@
 
 - [OpenAPI document](/api/openapi.json): every endpoint, its parameters and its answers
 - [Greeting](/api/hello/world): `GET /api/hello/{name}`, a greeting for a name
-- [Notes](/api/notes): `GET /api/notes`, a page of notes, newest first (`?limit=20&before=` a page's `next`), and `POST /api/notes` with `{ "text" }` to add one
+- [Notes](/api/notes): `GET /api/notes`, a page of notes, newest first (`?limit=20&before=` a page's `next`), `POST /api/notes` with `{ "text" }` to add one, and `PATCH /api/notes/{id}` to change one
 - [Health](/api/health): `GET /api/health`, whether the API is up

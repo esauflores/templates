@@ -1,4 +1,5 @@
-import { desc, lt, sql } from "drizzle-orm";
+import { desc, eq, lt, sql } from "drizzle-orm";
+import { HTTPException } from "hono/http-exception";
 
 import { db } from "@api/core/db.ts";
 
@@ -39,4 +40,18 @@ const insertQuery = db
 export async function addNote(text: string) {
   const [note] = await insertQuery.all({ text, createdAt: new Date().toISOString() });
   return note!;
+}
+
+/** Changing a note's text, prepared once too. */
+const updateQuery = db
+  .update(notes)
+  .set({ text: sql.placeholder("text") })
+  .where(eq(notes.id, sql.placeholder("id")))
+  .returning()
+  .prepare();
+
+export async function updateNote(id: number, text: string) {
+  const [note] = await updateQuery.all({ id, text });
+  if (!note) throw new HTTPException(404, { message: "No such note" });
+  return note;
 }

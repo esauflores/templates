@@ -11,6 +11,7 @@ modules together. `modules/hello/` is the working example to copy, `modules/note
 | `GET /api/hello/{name}` | `{ message }`: the example module                                        |
 | `GET /api/notes`        | `{ notes, next }`: a page, newest first (`?limit=20&before=<next>`)      |
 | `POST /api/notes`       | `{ text }` saves a note and answers it, `201`                            |
+| `PATCH /api/notes/{id}` | `{ text }` changes a note's text and answers it; `404` when there's none |
 
 ## Layout
 

@@ -62,8 +62,9 @@ fresh database of 50 notes.
 | `/` (index.html)                | 268k req/s [266–277k], p99 0.8 ms   |
 | JS bundle (105 KB gzipped)      | 74k req/s [71–74k], p99 2.7 ms      |
 | `/api/hello/{name}`             | 50k req/s [44–51k], p99 5.1 ms      |
-| `GET /api/notes` (a page of 20) | 19.5k req/s [19.5–19.7k], p99 12 ms |
-| `POST /api/notes`               | 7.0k req/s [4.8–7.8k], p99 36 ms    |
+| `GET /api/notes` (a page of 20) | 19.8k req/s [17.6–20.0k], p99 13 ms |
+| `POST /api/notes`               | 7.9k req/s [7.3–8.0k], p99 29 ms    |
+| `PATCH /api/notes/{id}`         | 10.3k req/s [10.2–10.9k], p99 23 ms |
 
 - The page is bundled ahead of time, so the first request is answered at once, from memory: the bundler and
   Tailwind aren't loaded at runtime.
@@ -82,8 +83,9 @@ fresh database of 50 notes.
   limit on): the page's query is prepared once (`notes.service.ts`), 5.9k to 11k pages of 50 a second; and
   `synchronous = NORMAL` (`core/db.ts`) syncs the disk at checkpoints rather than on each commit, 310 to 4.9k writes
   a second, with p99 down from 1.7 s to 45 ms. A bigger page cache made no difference.
-- The insert is prepared once too: 4.7k to 7.0k notes a second (6 rounds each, alternating, no rate limit). Writes
-  vary more between rounds than reads (4.8k to 7.8k).
+- The insert and the update are prepared once too: the insert went from 4.7k to 7.0k notes a second (6 rounds each,
+  alternating, no rate limit). Writes vary more between rounds than reads. The update (always note 25 here) rewrites
+  one row, while the insert adds one.
 - Writing grows the server's memory: after 24k notes in 5 s it was 138 MB RSS, 94 MB its own (78 / 35 MB after the
   API's reads). Not looked into further.
 - The request logger costs about a third of the API's throughput on one core (one line to stdout per request).
@@ -94,5 +96,5 @@ fresh database of 50 notes.
 To rerun it: `bun run build`, then from `server/dist/`,
 `PORT=3130 RATE_LIMIT=0 taskset -c 1 bun server/src/server.js`, and
 `oha -z 5s -c 100 -H "Accept-Encoding: gzip" http://127.0.0.1:3130/` (and the JS's `/chunk-….js`, and
-`/api/hello/bench`, `/api/notes` and a `POST /api/notes` on a fresh database of 50 notes). Numbers vary between
-machines.
+`/api/hello/bench`, and `/api/notes`, a `POST /api/notes` and a `PATCH /api/notes/25` on a fresh database of 50
+notes). Numbers vary between machines.

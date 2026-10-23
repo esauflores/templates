@@ -55,6 +55,37 @@ describe("GET /api/notes", () => {
   });
 });
 
+describe("PATCH /api/notes/{id}", () => {
+  const patch = (id: number | string, body: unknown) =>
+    createApp().request(`/api/notes/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  it("changes the text and answers the note, keeping its id and time", async () => {
+    const note = await addNote("Draft");
+    const response = await patch(note.id, { text: " Final " });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ...note, text: "Final" });
+  });
+
+  it("answers 404 for a note that doesn't exist", async () => {
+    const response = await patch(999_999, { text: "Final" });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "No such note" });
+  });
+
+  it("rejects an id that isn't a positive number, and an empty text, with a 400", async () => {
+    const note = await addNote("Draft");
+
+    expect((await patch("abc", { text: "Final" })).status).toBe(400);
+    expect((await patch(note.id, { text: "" })).status).toBe(400);
+  });
+});
+
 describe("POST /api/notes", () => {
   it("answers the saved note with a 201, trimmed, and GET lists it first", async () => {
     const response = await post({ text: "  Buy milk " });

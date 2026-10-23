@@ -30,6 +30,14 @@ export const NotesQuerySchema = z.object({
     .openapi({ param: { name: "before", in: "query" }, description: "A page's `next`", example: 21 }),
 });
 
+export const NoteParamsSchema = z.object({
+  id: z.coerce
+    .number()
+    .int()
+    .positive()
+    .openapi({ param: { name: "id", in: "path" }, example: 1 }),
+});
+
 export const NewNoteSchema = z
   .object({ text: z.string().trim().min(1).max(500).openapi({ example: "Buy milk" }) })
   .openapi("NewNote");
