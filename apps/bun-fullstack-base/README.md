@@ -120,7 +120,7 @@ could send its own X-Forwarded-For.
 ## Benchmark
 
 `bun run bench` builds, then loads each route with [oha](https://github.com/hatoo/oha) (`cargo install oha`), 3
-rounds each on a fresh server and database of 50 notes. There's one route per kind of work: the page (a small static
+rounds each on a fresh server and a fresh copy of a database of a million notes (46 MB). There's one route per kind of work: the page (a small static
 file), the JS bundle (a large one), `/api/hello` (the API's own cost, no database), a page of notes (a read) and
 adding a note (a write). A route doing a different kind of work (a search, a join, an upload) earns a row; another
 write by id wouldn't.
@@ -133,20 +133,23 @@ brackets:
 
 |                                    | Built (`dist/`)                       | Behind Caddy                    |
 | ---------------------------------- | ------------------------------------- | ------------------------------- |
-| Ready to answer                    | 50 ms [48–76], each on a new database |                                 |
+| Ready to answer                    | 47 ms [46–63], each on a new database |                                 |
 | First page request                 | 0.2 ms                                |                                 |
 | Memory, started / loaded           | 50 / 65 MB RSS, own 12 / 26 MB        |                                 |
-| `/` (index.html)                   | 261k req/s [214–277k], p99 0.9 ms     | 17k req/s [17–18k], p99 15.5 ms |
-| JS bundle (338 KB, 107 KB gzipped) | 76k req/s [75–76k], p99 2.5 ms        | 11k req/s [11–11k], p99 25.1 ms |
-| `/api/hello/{name}`                | 61k req/s [57–62k], p99 4.1 ms        | 14k req/s [13–14k], p99 19.8 ms |
-| `GET /api/notes` (a page of 20)    | 22k req/s [22–23k], p99 9.4 ms        | 14k req/s [13–14k], p99 18.5 ms |
-| `POST /api/notes`                  | 26k req/s [25–26k], p99 9.0 ms        | 12k req/s [12–13k], p99 21.1 ms |
+| `/` (index.html)                   | 279k req/s [278–279k], p99 0.7 ms     | 18k req/s [18–18k], p99 14.5 ms |
+| JS bundle (338 KB, 107 KB gzipped) | 77k req/s [77–77k], p99 2.5 ms        | 11k req/s [11–11k], p99 23.6 ms |
+| `/api/hello/{name}`                | 64k req/s [64–64k], p99 3.5 ms        | 15k req/s [15–16k], p99 16.6 ms |
+| `GET /api/notes` (a page of 20)    | 24k req/s [24–24k], p99 8.9 ms        | 14k req/s [14–14k], p99 18.3 ms |
+| `POST /api/notes`                  | 27k req/s [27–27k], p99 7.8 ms        | 14k req/s [14–14k], p99 17.9 ms |
 
 - First page request and memory are measured by hand. Most of the memory is Bun's own executable, shared between
   instances; the server's own is 12 MB idle and 26 MB under load.
 - The build's gzip copies are what make the static rows: without them the JS bundle measured 26k req/s straight
   (three times the bytes) and 0.4k behind Caddy, which compressed its 338 KB again on every request.
 - Behind Caddy, the proxy is most of the cost: one more hop per request, on a core of its own.
+- A million notes cost the database routes nothing measurable (50 notes gave the same numbers): a page is found by
+  id (`WHERE id < ? ORDER BY id DESC`), a walk down the primary key's B-tree, and an insert appends to it. A query
+  that scans (a search, an `OFFSET`) would slow with the table.
 - On the database routes the query is most of the time. Two settings keep it fast: the queries are prepared once
   (`notes.service.ts`), about half again the requests a second, and `synchronous = NORMAL` (`core/db.ts`) syncs the
   disk at checkpoints, which keeps writes in the tens of thousands a second rather than a few hundred.

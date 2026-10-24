@@ -1,12 +1,16 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { Database } from "bun:sqlite";
+import { rmSync } from "node:fs";
+import { copyFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
  * The HTTP benchmark behind the README's table: the built server (dist/) under load from
- * [oha](https://github.com/hatoo/oha), each route for ROUNDS rounds, each round on a fresh server and a fresh database
- * of 50 notes, then the median and the range. `bun run bench` builds first, then runs this.
+ * [oha](https://github.com/hatoo/oha), each route for ROUNDS rounds, each round on a fresh server and a fresh copy of
+ * a database of NOTES notes, then the median and the range. `bun run bench` builds first, then runs this.
+ * - The database is made once: the server's migrations, then the notes in one transaction, as a million through the
+ *   API would take most of a minute a round.
  * - Each route twice: straight to the server, then behind [Caddy](https://caddyserver.com) compressing the answers
  *   (`encode zstd gzip`), as the README has it in production, so the second column is what a client gets.
  * - The server is pinned to one core, Caddy to another and oha to the rest (Linux, with taskset), so the server's
@@ -15,6 +19,7 @@ import { fileURLToPath } from "node:url";
  * - Run it on a quiet machine, plugged in, on a performance power profile: a power-saving one halves every number.
  */
 const ROUNDS = 3;
+const NOTES = 1_000_000;
 const SECONDS = 5;
 const CONNECTIONS = 100;
 const PORT = 3130;
@@ -67,15 +72,21 @@ async function ready(port: number, since: number): Promise<number> {
   }
 }
 
-/** Adds the 50 notes every round starts from. */
-async function seed() {
-  for (let i = 1; i <= 50; i++) {
-    await fetch(`http://127.0.0.1:${PORT}/api/notes`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: `Note number ${i}, a line of text` }),
-    });
-  }
+/** The database every round starts from a copy of: the server makes its tables, then NOTES notes go in directly. */
+async function seed(path: string) {
+  const server = spawn(["bun", "server.js"], SERVER_CPU, {
+    env: { NODE_ENV: "production", PORT: String(PORT), DATABASE_PATH: path },
+  });
+  await ready(PORT, performance.now());
+  server.kill();
+  await server.exited;
+  const db = new Database(path);
+  const insert = db.prepare("INSERT INTO notes (text, createdAt) VALUES (?, ?)");
+  const createdAt = new Date().toISOString();
+  db.transaction(() => {
+    for (let i = 1; i <= NOTES; i++) insert.run(`Note number ${i}, a line of text`, createdAt);
+  })();
+  db.close();
 }
 
 /** Caddy in front of the server, compressing as in production; its state goes in `dir`, not the home directory. */
@@ -95,6 +106,7 @@ async function proxy(dir: string) {
 /** One round: a fresh server and database (and Caddy, when proxied), oha on the target, then everything stopped. */
 async function round(target: Target, proxied: boolean): Promise<Round> {
   const data = await mkdtemp(join(tmpdir(), "bench-"));
+  await copyFile(seeded, join(data, "app.db"));
   const started = performance.now();
   const server = spawn(["bun", "server.js"], SERVER_CPU, {
     env: { NODE_ENV: "production", PORT: String(PORT), RATE_LIMIT: "0", DATABASE_PATH: join(data, "app.db") },
@@ -102,7 +114,6 @@ async function round(target: Target, proxied: boolean): Promise<Round> {
   let caddy: Bun.Subprocess | undefined;
   try {
     const readyMs = await ready(PORT, started);
-    await seed();
     if (proxied) caddy = await proxy(data);
     const body = target.body ? ["-m", target.method, "-H", "content-type: application/json", "-d", target.body] : [];
     const load = spawn(
@@ -174,6 +185,11 @@ async function cell(target: Target, proxied: boolean): Promise<string> {
   const text = `${rate(rps.median)} req/s [${rate(rps.min)}–${rate(rps.max)}], p99 ${p99.median.toFixed(1)} ms`;
   return errors ? `${text}, ${errors} errors` : text;
 }
+
+const seedDir = await mkdtemp(join(tmpdir(), "bench-seed-"));
+const seeded = join(seedDir, "app.db");
+await seed(seeded);
+process.on("exit", () => rmSync(seedDir, { recursive: true, force: true }));
 
 const readies: number[] = [];
 console.log("| | Built (`dist/`) | Behind Caddy (`encode zstd gzip`) |\n| --- | --- | --- |");
