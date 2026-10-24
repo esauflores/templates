@@ -86,8 +86,6 @@ async function round(target: Target): Promise<Round> {
     const body = target.body ? ["-m", target.method, "-H", "content-type: application/json", "-d", target.body] : [];
     const load = spawn(
       ["oha", "-z", `${SECONDS}s`, "-c", String(CONNECTIONS), "--no-tui", "--output-format", "json"].concat([
-        "-H",
-        "Accept-Encoding: gzip, deflate, br, zstd",
         ...body,
         `http://127.0.0.1:${PORT}${target.path}`,
       ]),

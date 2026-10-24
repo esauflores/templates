@@ -24,8 +24,8 @@ bun run dev                        # http://localhost:3000, API docs at /api/doc
 
 | Script                | What it does                                                                        |
 | --------------------- | ----------------------------------------------------------------------------------- |
-| `bun run dev`         | Serve with hot reload: the page on web changes, the API on api changes              |
-| `bun run build`       | Bundle the server, the API and the page, minified, into `dist/`                     |
+| `bun run dev`         | Serve with hot reload: the page, its stylesheet and the API on their files' changes |
+| `bun run build`       | Compile the stylesheet, then bundle the server, the API and the page into `dist/`   |
 | `bun run start`       | Serve that build in production mode (run `build` first)                             |
 | `bun run check`       | Format check, lint and type-check everything (`check:fix` fixes what it can)        |
 | `bun run test`        | API and web (headless Chromium) tests (`test:watch` reruns on change)               |
@@ -46,7 +46,8 @@ browser ── :3000 ── src/server.ts
 - **One origin, one package.** The page and the API share a port (no CORS, no proxy) and a `package.json`. The web
   app may import only types from `@/api/`, a lint rule, so none of the API's code reaches the page.
 - **Bun bundles the web app**, on request with hot reload in dev, ahead of time for production (`scripts/build.ts`).
-  Vite+ only checks and tests.
+  Vite+ only checks and tests. The stylesheet is not Bun's: Tailwind's own CLI compiles it (`scripts/build.ts`,
+  `scripts/dev.ts`), then Bun bundles it with the page like any other file.
 - **Typed and documented as it's written.** Routes validate their input with Zod (`400 { error }` when it's invalid),
   the web app's clients take their types from the routes, and `/api/openapi.json` (Swagger UI at `/api/docs`) is built
   from them.
@@ -67,30 +68,33 @@ An API module, a page that calls it, and tests for both. The steps are written a
 src/
 ├── server.ts       Bun.serve: /api to the API, the rest to the web app; the port, graceful shutdown
 ├── static.ts       the web app's routes: as Bun bundles them (dev), or the built files from memory (production)
-├── api/            the Hono API: app.ts, core/ (config, db and its migrations/, limits, router), a folder per module
-│                   → src/api/README.md
-└── web/            the React app: index.html, main.tsx, lib/api.ts (the typed clients), pages/, public/
-                    → src/web/README.md
+├── api/            the Hono API: app.ts, drizzle.config.ts, core/ (config, db and its migrations/, limits, router), a
+│                   folder per module → src/api/README.md
+└── web/            the React app: index.html, main.tsx, lib/api.ts (the typed clients), components.json (shadcn),
+                    pages/, public/ → src/web/README.md
 scripts/
-├── build.ts        the production build into dist/
+├── dev.ts          bun run dev: the server, and the stylesheet rebuilt as src/web changes
+├── build.ts        the production build into dist/, the stylesheet compiled first
 └── bench.ts        the benchmark: the built server under HTTP load with oha, run locally
 .agents/skills/     the steps for adding API modules, endpoints and API calls
-bunfig.toml         package binaries (vp) run on Bun, and Tailwind as Bun's bundler plugin in dev
 tsconfig.json       TypeScript settings and the @/ alias, extended by src/web/tsconfig.json
 vite.config.ts      Vite+ format, lint and test settings: server (Bun) and web (Chromium) test projects
-components.json     shadcn's settings, for bunx shadcn add
 Dockerfile          the production image
 .env.example        the settings and their defaults, to copy to .env when changing one
 ```
 
 ## Dev and production
 
-- **Dev** (`bun run dev`) listens on `127.0.0.1` only, and hot-reloads the page and the API.
-- **Build** (`bun run build`) bundles `src/server.ts` with everything it imports into `dist/`, minified: the page as
-  hashed, gzipped files, and the migrations. A broken import fails here, not on a request, and `dist/` runs without
-  `node_modules`.
+- **Dev** (`bun run dev`) listens on `127.0.0.1` only. One `bun --hot` server hot-reloads the page and the API, and
+  `scripts/dev.ts` rebuilds `src/web/styles/generated.css` (ignored by git, imported by `main.tsx`) when `src/web`
+  changes, with Tailwind's CLI rather than its `--watch`, which wants a native watcher some installs block.
+- **Build** (`bun run build`) compiles that stylesheet, then bundles `src/server.ts` with everything it imports into
+  `dist/`, minified by Bun: the page and its CSS as hashed files, and the migrations. A broken import fails here, not on
+  a request, and `dist/` runs without `node_modules`.
 - **Production** (`bun run start`) serves the page's files from memory, from any working directory: hashed files
-  cached for a year, `index.html` and `public/` checked on every load.
+  cached for a year, `index.html` and `public/` checked on every load. Each is one fixed answer, the same bytes to every
+  client, so Bun serves it on its fast path and answers the ETag and the 304 itself. Compression is the reverse proxy's
+  (see [Docker](#docker)), not this process's.
 
 ## Docker
 
@@ -106,9 +110,10 @@ build. The database lives in the `/data` volume: mount one there, or it's lost w
 with `SQLiteError: unable to open database file`. The `HEALTHCHECK` calls `/api/health`, which reads the database
 too.
 
-Put a reverse proxy (Caddy, nginx, your platform's) in front: it terminates TLS, compresses the API's answers, and
-sets security headers on the page, which the app only sets on `/api`. The image sets `TRUST_PROXY=true` for it (see
-[Rate limits](src/api/README.md#rate-limits)).
+Put a reverse proxy (Caddy, nginx, your platform's) in front: it terminates TLS, compresses the answers (the page and
+the API alike: the server sends both uncompressed), and sets security headers on the page, which the app only sets on
+`/api`. With Caddy that's `encode zstd gzip`; with nginx, `gzip on` and its MIME types. The image sets
+`TRUST_PROXY=true` for it (see [Rate limits](src/api/README.md#rate-limits)).
 
 ## Benchmark
 
@@ -124,17 +129,21 @@ Medians, with the range in brackets:
 
 |                                 | Built (`dist/`)                       |
 | ------------------------------- | ------------------------------------- |
-| Ready to answer                 | 47 ms [45–53], each on a new database |
+| Ready to answer                 | 50 ms [47–53], each on a new database |
 | First page request              | 0.2 ms                                |
 | Memory, started / loaded        | 50 / 65 MB RSS, own 12 / 26 MB        |
-| `/` (index.html)                | 272k req/s [265–285k], p99 0.7 ms     |
-| JS bundle (105 KB gzipped)      | 77k req/s [77–77k], p99 2.5 ms        |
-| `/api/hello/{name}`             | 62k req/s [62–63k], p99 3.8 ms        |
-| `GET /api/notes` (a page of 20) | 24k req/s [24–24k], p99 9.4 ms        |
-| `POST /api/notes`               | 27k req/s [27–27k], p99 8.1 ms        |
+| `/` (index.html)                | 274k req/s [271–275k], p99 0.8 ms     |
+| JS bundle (338 KB)              | 26k req/s [26–26k], p99 7.2 ms        |
+| `/api/hello/{name}`             | 54k req/s [52–55k], p99 5.0 ms        |
+| `GET /api/notes` (a page of 20) | 22k req/s [22–22k], p99 9.9 ms        |
+| `POST /api/notes`               | 25k req/s [24–26k], p99 9.0 ms        |
 
 - First page request and memory are measured by hand. Most of the memory is Bun's own executable, shared between
   instances; the server's own is 12 MB idle and 26 MB under load.
+- The static routes answer each file as it is, which is what lets Bun answer them without running any code per request:
+  compressing them here would cost most of that (a response built per request measures at a third to a half of a fixed
+  one), so compression is the proxy's job and isn't in these numbers. That's why the JS bundle row moves its 338 KB
+  uncompressed: behind a proxy's gzip it's 105 KB a response, and most of that row's time goes away.
 - On the database routes the query is most of the time. Two settings keep it fast: the queries are prepared once
   (`notes.service.ts`), about half again the requests a second, and `synchronous = NORMAL` (`core/db.ts`) syncs the
   disk at checkpoints, which keeps writes in the tens of thousands a second rather than a few hundred.
@@ -149,3 +158,5 @@ Medians, with the range in brackets:
 - Tests sit next to the code they test, as `<name>.test.ts` (`.test.tsx` for components).
 - Comments go above the code they explain (doc comments), not inside function bodies or at the end of a line.
 - Lines wrap at 120 characters; `bun run check:fix` formats and sorts imports.
+- A script that runs a package's binary says `bun --bun` (`vp`, `drizzle-kit`), so it runs on Bun, the runtime the app
+  runs on, instead of the Node its shebang asks for. There's no bunfig.toml to do it for every script.

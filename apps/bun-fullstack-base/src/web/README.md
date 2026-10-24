@@ -19,7 +19,8 @@ src/web/
 ├── public/          files served at their own paths (/robots.txt, /llms.txt), checked on every load
 ├── assets/          files the page links (favicon.svg), bundled under a hashed name, kept by browsers
 ├── main.tsx         the router and the QueryClientProvider; one route per page
-├── env.d.ts         types for CSS imports and Bun's import.meta.hot
+├── env.d.ts         Bun's import.meta.hot, as main.tsx uses it
+├── components.json  shadcn's settings: where its components go, the stylesheet, the aliases
 ├── components/      the app's own components (ApiStatus, ThemeToggle)
 │   └── ui/          shadcn components, added with bunx shadcn add (yours to edit)
 ├── lib/
@@ -28,15 +29,17 @@ src/web/
 │   └── utils.ts     cn(): merges Tailwind classes, used by the components
 ├── pages/           one component per route
 ├── styles/
-│   ├── fonts.css    Geist and Geist Mono, Latin only
-│   ├── global.css   Tailwind, and the theme (colors, fonts, radius) as CSS variables, light and dark
-│   └── shadcn.css   shadcn's Tailwind additions, copied so shadcn stays a dev tool
-├── testing.ts       for tests: mockApi() (canned API answers in place of fetch), createTestQueryClient()
+│   ├── fonts.css       Geist and Geist Mono, Latin only (inlined into the CSS when it's compiled)
+│   ├── global.css      Tailwind, and the theme (colors, fonts, radius) as CSS variables, light and dark
+│   ├── shadcn.css      shadcn's Tailwind additions, copied so shadcn stays a dev tool
+│   └── generated.css   generated: Tailwind's compilation of the above, imported by main.tsx (ignored by git)
 └── tsconfig.json    DOM and JSX in place of Bun's types
 ```
 
 Every path that isn't `/api` or a file gets `index.html`, and React Router picks the page; unknown ones are sent to `/`.
-Tailwind finds the classes in the source files, so there's no Tailwind config.
+Tailwind finds the classes in the source files, so there's no Tailwind config: `bun run dev` and `bun run build` run
+its CLI over `styles/global.css` into `styles/generated.css` (ignored by git), which `main.tsx` imports so Bun bundles it
+with the page, and dev rebuilds it as the sources change.
 
 ## Calling the API
 
@@ -49,21 +52,37 @@ for reading, changing and testing.
 
 1. `pages/Books.tsx`: a component exporting `Books`, reading data with `useQuery`.
 2. Its route in `main.tsx`, before the `*` fallback: `<Route path="/books" element={<Books />} />`.
-3. `pages/Books.test.tsx`: mock the API with `mockApi`, render it, assert on the screen.
+3. `pages/Books.test.tsx`: render it, assert on the screen (see [Tests](#tests): the API is mocked by MSW).
 
 ## Components and theme
 
-`bunx shadcn add card` from the repo root puts a component in `components/ui/`, as source to edit. shadcn's registry
-writes `import { cn } from "cn"` and adds the `cn` package: change the import to `@/web/lib/utils.ts`, run
-`bun remove cn`, then `bun run check:fix`.
+`bunx shadcn add card --cwd src/web` puts a component in `components/ui/`, as source to edit: `--cwd` is what finds
+`components.json` here, and its aliases (`@/web/…`) resolve from this folder through the `paths` in `tsconfig.json`.
+shadcn's registry writes `import { cn } from "cn"` and adds the `cn` package: change the import to
+`@/web/lib/utils.ts`, run `bun remove cn`, then `bun run check:fix`.
 
-Use the theme's classes (`bg-background`, `text-destructive`, …), not raw colors. Next to shadcn's, the template adds
+Use the theme's classes (`bg-background`, `text-destructive`, …), not raw colors, and a class only from a file Tailwind
+scans (`src/`, from the repo root), or it won't be in the stylesheet. Next to shadcn's, the template adds
 `brand` (the lime accent; `brand-text` for text), `subtle`, `edge` (a stronger border), `success`, `success-muted`,
 `destructive-muted`, `code` and `code-string`. A new one is a variable in both blocks of `global.css` (light in
 `:root`, dark in `.dark`) and a `--color-*` in `@theme`. Icons come from [Lucide](https://lucide.dev).
 
 ## Tests
 
-They run in headless Chromium (`bunx playwright install chromium` once) and never reach the API: `mockApi` answers in
-place of `fetch`, keyed by `"METHOD /path"`, and a call with no handler answers `500`, so a missing mock shows on the
-screen. `createTestQueryClient()` turns off retries, so errors show at once.
+They run in headless Chromium (`bunx playwright install chromium` once), with the API mocked in the browser by
+[MSW](https://mswjs.io): `mocks.ts` has one handler per endpoint, `mocks.setup.ts` starts the service worker before each
+test file (vite.config.ts serves its script and lists the setup file), and a test overrides a route for its own case:
+
+```tsx
+import { http, HttpResponse } from "msw";
+
+import { worker } from "@/web/mocks.ts";
+
+worker.use(http.get("/api/books", () => HttpResponse.json({ error: "Nope" }, { status: 503 })));
+```
+
+- **No server, no database, no port.** Requests are answered inside Chromium, so the suite stays hermetic and fast.
+- **Error paths the real API never answers** — a 502 with no body, a health check that's down, a timeout — are one
+  `worker.use(…)` away.
+- **A missing handler is loud:** anything unmocked answers `500 { error: "No handler for …" }`, which shows on screen.
+- Handlers carry state when a test needs it (a list that grows after a POST); they're reset between tests.

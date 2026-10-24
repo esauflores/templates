@@ -10,7 +10,7 @@ import { pageRoutes } from "./static.ts";
  *
  * /api and everything under it goes to the API ("/api/*" alone doesn't match "/api"), everything else to the web
  * app, which answers any other path with its index.html, so client-side routes load too.
- * - `bun run dev`: Bun bundles the page (TSX, and CSS through Tailwind, see bunfig.toml), rebundles on change and
+ * - `bun run dev`: Bun bundles the page (TSX, and the stylesheet the dev script compiles), rebundles on change and
  *   hot-reloads it (React Fast Refresh); --hot reloads the API. It listens on 127.0.0.1 only, so the dev server (hot
  *   reload, browser console) isn't reachable from the network.
  * - `bun run build`, then `bun run start`: scripts/build.ts bundles this file, the API and the page into dist/ ahead

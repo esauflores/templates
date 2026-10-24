@@ -1,10 +1,15 @@
 {
-  // The web app runs in the browser: DOM and JSX instead of Bun's types. Paths come from the root's (@/* is src/*).
+  // The web app runs in the browser: DOM and JSX instead of Bun's types.
+  // The root's paths are restated for what resolves them from this folder: shadcn's CLI, which finds components.json
+  // here and resolves `@/web/…` against the folder it runs in (the root's `@/*` replaces, rather than merges, into this).
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": [],
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["../../src/*"]
+    }
   },
   "include": ["."],
   "exclude": []

@@ -20,6 +20,7 @@ example to copy; `hello/` is the smallest.
 ```
 src/api/
 ├── app.ts           createApp(): the error answers, the middleware in order, /health, the modules, the document
+├── drizzle.config.ts  bun run db:generate: the tables glob and where migrations/ go
 ├── core/            shared by every module, knows no feature
 │   ├── config.ts    config(): every setting from the environment, checked with Zod, with its default
 │   ├── db.ts        db: SQLite through Drizzle, migrated at start from migrations/

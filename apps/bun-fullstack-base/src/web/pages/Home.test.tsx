@@ -1,20 +1,22 @@
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { http, HttpResponse } from "msw";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 
+import { worker } from "@/web/mocks.ts";
 import { Home } from "@/web/pages/Home.tsx";
-import { type Handler, mockApi } from "@/web/testing.ts";
-import { createTestQueryClient } from "@/web/testing.ts";
 
-/** Renders the page with the API mocked; the health check answers unless a test says otherwise. */
-function renderHome(handlers: Record<string, Handler>) {
-  const calls = mockApi({ "GET /api/health": () => ({ body: { ok: true } }), ...handlers });
+/**
+ * The page, against the handlers of mocks.ts (MSW, in the browser): the health check and the greeting answer as the API
+ * would, and a test overrides one of them for what the real API never answers (a 502, a health check that's down).
+ * Retries are off, so an error reaches the screen at once.
+ */
+function renderHome() {
   render(
-    <QueryClientProvider client={createTestQueryClient()}>
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <Home />
     </QueryClientProvider>,
   );
-  return calls;
 }
 
 /** The console's answer: its status badge and its body. */
@@ -23,52 +25,51 @@ const answer = async (status: string) => ({
   body: screen.getByText((_, element) => element?.tagName === "PRE" && element.hasAttribute("aria-live")),
 });
 
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
-});
+/** Types a name and sends it. */
+const send = (name: string) => {
+  fireEvent.change(screen.getByLabelText(/^name/), { target: { value: name } });
+  fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+};
+
+afterEach(cleanup);
 
 describe("Home", () => {
   it("shows the API's answer, and sends the name from the form (world when empty)", async () => {
-    const calls = renderHome({
-      "GET /api/hello/world": () => ({ body: { message: "Hello, world!" } }),
-      "GET /api/hello/Bun": () => ({ body: { message: "Hello, Bun!" } }),
-    });
+    renderHome();
+    expect((await answer("200 OK")).body.textContent).toContain('"Hello, world!"');
 
-    expect((await answer("200 OK")).body.textContent).toContain('"message": "Hello, world!"');
-    fireEvent.change(screen.getByLabelText(/^name/), { target: { value: "Bun" } });
-    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+    send("Bun");
     expect(await screen.findByText(/"Hello, Bun!"/)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText(/^name/), { target: { value: " " } });
-    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+
+    send(" ");
     expect(await screen.findByText(/"Hello, world!"/)).toBeTruthy();
-    expect(calls.map((call) => call.key).filter((key) => key.includes("hello"))).toEqual([
-      "GET /api/hello/world",
-      "GET /api/hello/Bun",
-      "GET /api/hello/world",
-    ]);
   });
 
-  it("shows the API's error, with its status", async () => {
-    renderHome({
-      "GET /api/hello/world": () => ({ status: 404, statusText: "Not Found", body: { error: "No such greeter" } }),
-    });
+  it("shows the API's error, with its status and its message", async () => {
+    worker.use(
+      http.get("/api/hello/world", () =>
+        HttpResponse.json({ error: "No such greeter" }, { status: 404, statusText: "Not Found" }),
+      ),
+    );
+    renderHome();
 
     expect((await answer("404 Not Found")).body.textContent).toContain('"error": "No such greeter"');
   });
 
   it("shows the status when an error has no body", async () => {
-    renderHome({ "GET /api/hello/world": () => ({ status: 502, statusText: "Bad Gateway" }) });
+    worker.use(http.get("/api/hello/world", () => new HttpResponse(null, { status: 502, statusText: "Bad Gateway" })));
+    renderHome();
 
     expect((await answer("502 Bad Gateway")).body.textContent).toContain('"error": "Bad Gateway"');
   });
 
   it("shows whether the API answers its health check", async () => {
-    renderHome({ "GET /api/hello/world": () => ({ body: { message: "Hello, world!" } }) });
+    renderHome();
     expect(await screen.findByText(/api · healthy · \d+ms/)).toBeTruthy();
 
     cleanup();
-    renderHome({ "GET /api/health": () => ({ status: 503 }) });
+    worker.use(http.get("/api/health", () => new HttpResponse(null, { status: 503 })));
+    renderHome();
     expect(await screen.findByText("api · offline")).toBeTruthy();
   });
 });

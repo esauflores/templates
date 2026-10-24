@@ -6,8 +6,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { createQueryClient } from "@/web/lib/api.ts";
 import { Home } from "@/web/pages/Home.tsx";
 
-import "@/web/styles/fonts.css";
-import "@/web/styles/global.css";
+import "@/web/styles/generated.css";
 
 const container = document.getElementById("root");
 if (!container) throw new Error('Missing <div id="root"> in web/index.html');

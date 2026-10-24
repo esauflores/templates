@@ -7,10 +7,9 @@ FROM oven/bun:1.4.3-slim AS build
 
 WORKDIR /app
 
-# Dependencies first, so a code change doesn't reinstall them. --omit=peer skips peer dependencies, the big one being
-# the npm copy of Bun that bun-plugin-tailwind asks for, which this image already is.
-COPY package.json bun.lock bunfig.toml ./
-RUN bun install --frozen-lockfile --omit=peer
+# Dependencies first, so a code change doesn't reinstall them.
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
 COPY . .
 RUN bun run build

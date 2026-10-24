@@ -1,9 +1,0 @@
-# Run package binaries (like vp, whose shebang asks for Node) on Bun, the runtime the app itself runs on, whether or
-# not Node is installed. Applies to `bun run <script>` and `bun <bin>`.
-[run]
-bun = true
-
-# In dev, when server.ts serves web/index.html, Bun's bundler builds it and runs Tailwind on its CSS as a plugin. The
-# production build passes the plugin itself (scripts/build.ts).
-[serve.static]
-plugins = ["bun-plugin-tailwind"]

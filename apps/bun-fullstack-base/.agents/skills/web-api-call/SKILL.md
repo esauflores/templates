@@ -59,51 +59,40 @@ A new page also needs a route in `src/web/main.tsx`: a `<Route path="/books" ele
 ## Tests
 
 Next to the code they test: a page in `src/web/pages/Books.tsx` is tested in `src/web/pages/Books.test.tsx`.
-`mockApi` from `src/web/testing.ts` replaces `fetch` with handlers keyed by `"METHOD /path"` (no query string),
-receives the parsed JSON body, and returns the calls made. Wrap the component in a `QueryClientProvider` with
-`createTestQueryClient()`, from the same file (no retries), and unstub fetch after each test. Keep the
-mocked data in a variable the handlers share, so a refetch after a change sees it.
+
+The web tests run in headless Chromium with the API mocked in the browser by [MSW](https://mswjs.io): `src/web/mocks.ts`
+has one handler per endpoint, `src/web/mocks.setup.ts` starts its service worker (and resets handlers after each test),
+and both are wired in `vite.config.ts`. A test that needs another answer overrides a route with `worker.use(…)` — no
+server, database or port. The default handlers hold state, so a test that writes updates it and the next request sees it;
+they're reset between tests.
 
 ```tsx
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vite-plus/test";
+import { afterEach, expect, it } from "vite-plus/test";
 
+import { worker } from "@/web/mocks.ts";
 import { Books } from "@/web/pages/Books.tsx";
-import { createTestQueryClient, mockApi } from "@/web/testing.ts";
 
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
-});
+afterEach(cleanup);
 
 it("adds a book", async () => {
-  const books = [{ id: "1", title: "Dune" }];
-  const calls = mockApi({
-    "GET /api/books": () => ({ body: books }),
-    "POST /api/books": (body) => {
-      const book = { id: String(books.length + 1), ...(body as { title: string }) };
-      books.push(book);
-      return { status: 201, body: book };
-    },
-  });
   render(
-    <QueryClientProvider client={createTestQueryClient()}>
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <Books />
     </QueryClientProvider>,
   );
 
-  expect(await screen.findByText("Dune")).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Emma" } });
   screen.getByRole("button", { name: "Add" }).click();
 
   expect(await screen.findByText("Emma")).toBeTruthy();
-  expect(calls.find((call) => call.key === "POST /api/books")?.body).toEqual({ title: "Emma" });
 });
 ```
 
-Cover the error path too: a handler returning `{ status: 400, body: { error: "…" } }` should put that message on
-the screen.
+Add the route's handler to `mocks.ts` (that's what a new endpoint costs), and cover the error path with an override:
+a handler answering `{ status: 400, body: { error: "…" } }` puts that message on the screen. Anything with no handler at
+all answers `500 { error: "No handler for …" }`, so a forgotten mock shows up instead of passing.
 
 ## Verify
 

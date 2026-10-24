@@ -18,8 +18,9 @@ const REVALIDATE = "no-cache";
  * The web app's routes for Bun.serve. In dev, the page is Bun's to bundle as it's requested. Built ahead of time
  * (scripts/build.ts), it lists its files in dist/ instead: each is read once here and answered from memory, as Bun would
  * otherwise read the file again on every request. index.html answers every other path, so client-side routes load.
- * - A file with a gzip copy (scripts/build.ts) is always answered with it, as every browser accepts gzip, and one fixed
- *   answer per file keeps Bun's fast path for static responses (no code runs per request, and Bun answers 304 itself).
+ * - Each file is one fixed answer, the same bytes for every client, so no code runs per request: Bun answers it on its
+ *   fast path and adds the ETag, answering 304 when the client has that version. Compression is the reverse proxy's job
+ *   (see "Docker" in the README), not this process's.
  * - The files in the web app's public/ are answered at their own paths too (/robots.txt), as Vite does.
  * - A built page lists its files relative to the built server (dist/server.js, which this file is bundled into), so
  *   they're read from there, and the server runs from any working directory.
@@ -48,7 +49,6 @@ async function publicRoutes(dir: string, page: HTMLBundle): Promise<Record<strin
   const routes: Record<string, Response> = {};
   if (!existsSync(dir)) return routes;
   for await (const name of new Bun.Glob("**/*").scan({ cwd: dir, dot: true })) {
-    if (name.endsWith(".gz")) continue;
     const path = join(dir, name);
     const headers = { "content-type": Bun.file(path).type, "cache-control": REVALIDATE };
     routes[`/${name}`] = page.files ? await fromMemory(path, headers) : new Response(Bun.file(path), { headers });
@@ -56,10 +56,7 @@ async function publicRoutes(dir: string, page: HTMLBundle): Promise<Record<strin
   return routes;
 }
 
-/** A file's response, read once: its gzip copy (scripts/build.ts) when there is one. */
+/** A file's response, read once and answered from memory. */
 async function fromMemory(path: string, headers: Record<string, string>): Promise<Response> {
-  const gzip = Bun.file(`${path}.gz`);
-  const compressed = await gzip.exists();
-  const body = await (compressed ? gzip : Bun.file(path)).bytes();
-  return new Response(body, { headers: compressed ? { ...headers, "content-encoding": "gzip" } : headers });
+  return new Response(await Bun.file(path).bytes(), { headers });
 }
