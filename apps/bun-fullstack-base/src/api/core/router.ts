@@ -8,15 +8,28 @@ export const ErrorSchema = z.object({ error: z.string().meta({ example: "Not Fou
 
 /**
  * Validates a request's `target` (param, query, json, …) with `schema`, which also documents it in the OpenAPI
- * document. Invalid input answers `400 { error }` with Zod's readable message, before the handler runs.
+ * document. Invalid input answers `400 { error }`, before the handler runs.
  */
 export const validate = <Target extends keyof ValidationTargets, Schema extends StandardSchemaV1>(
   target: Target,
   schema: Schema,
 ) =>
   validator(target, schema, (result, c) => {
-    if (!result.success) return c.json({ error: z.prettifyError({ issues: result.error } as z.ZodError) }, 400);
+    if (!result.success) return c.json({ error: readable(result.error) }, 400);
   });
+
+/**
+ * The hook gets Standard Schema issues, not a ZodError, so z.prettifyError can't take them. This prints each issue
+ * the way it does: the message, then the path it's at.
+ */
+function readable(issues: readonly StandardSchemaV1.Issue[]) {
+  return issues
+    .map((issue) => {
+      const path = issue.path?.map((segment) => String(typeof segment === "object" ? segment.key : segment)).join(".");
+      return `✖ ${issue.message}${path ? `\n  → at ${path}` : ""}`;
+    })
+    .join("\n");
+}
 
 /** A documented JSON response for describeRoute: `200: json(NoteSchema, "The note")`. */
 export const json = (schema: StandardSchemaV1, description: string) => ({
