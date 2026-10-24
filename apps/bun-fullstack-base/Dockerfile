@@ -20,9 +20,9 @@ FROM oven/bun:1.4.3-alpine
 WORKDIR /app
 COPY --from=build /app/dist ./
 
-# The database lives in /data, a volume, so it outlives the container: mount one there (-v app-data:/data).
+# The database lives in /data: mount a volume there (-v app-data:/data) so it outlives the container. No VOLUME line,
+# which some hosts (Railway) refuse, as they mount their own.
 RUN mkdir /data && chown bun:bun /data
-VOLUME /data
 ENV DATABASE_PATH=/data/app.db
 
 # Hono's logger colors the status codes unless NO_COLOR is set; container logs aren't a terminal, so plain text.
