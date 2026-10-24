@@ -1,8 +1,5 @@
-# Two stages: the first installs everything and runs the production build (scripts/build.ts), the second keeps only
-# dist/, which holds the server, the API and the page already bundled and the migrations, so it needs no
-# node_modules: the database is SQLite from Bun itself, with no addon to build for a platform. That's why the second
-# stage can be Alpine (musl), about 110 MB smaller than the Debian slim one; the build stage stays on Debian, where the
-# dependencies are installed for, and its dist is plain JavaScript.
+# Two stages: Debian builds dist/, then Alpine runs it. dist/ is plain JavaScript with no node_modules (SQLite is
+# Bun's own), so the small Alpine image works.
 FROM oven/bun:1.4.3-slim AS build
 
 WORKDIR /app
@@ -31,9 +28,7 @@ ENV NO_COLOR=1
 USER bun
 EXPOSE 3000
 
-# Docker marks the container unhealthy when /api/health stops answering (Compose and Swarm can then restart it), on
-# the port the server listens on, with Alpine's own (busybox) wget, not a whole Bun process per check. The health check
-# isn't rate-limited.
+# Marks the container unhealthy when /api/health stops answering, so Compose or Swarm can restart it.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget -qO /dev/null "http://127.0.0.1:${PORT:-3000}/api/health" || exit 1
 
