@@ -1,13 +1,12 @@
 {
-  // The settings every package shares (server/ and apps/), each extends it. @api/* is the API's own imports: the server and web
-  // load the API's source through the "api" package, so they resolve those imports too.
+  // The settings for everything that runs on Bun: the server, the API, the scripts and the benchmarks. The web app
+  // has its own (src/web/tsconfig.json), which extends this one with DOM and JSX in place of Bun's types.
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
     "module": "Preserve",
     "paths": {
-      "@api/*": ["./apps/api/src/*"],
-      "@web/*": ["./apps/web/src/*"]
+      "@/*": ["./src/*"]
     },
     "types": ["bun"],
     "strict": true,
@@ -19,5 +18,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["src", "scripts", "vite.config.ts", "drizzle.config.ts"],
+  "exclude": ["src/web"]
 }

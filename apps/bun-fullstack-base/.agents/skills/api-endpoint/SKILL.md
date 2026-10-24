@@ -1,72 +1,66 @@
 ---
 name: api-endpoint
-description: Add an endpoint to an existing API module in apps/api/src/modules/<module>/, with a JSON body, query string or path params validated by Zod, declared responses, and tests. Use when an existing module needs another route, e.g. "add POST /api/books" or "let /api/books filter by title".
+description: Add an endpoint to an existing API module in src/api/<module>/, with a JSON body, query string or path params validated by Zod, declared responses, and tests. Use when an existing module needs another route, e.g. "add POST /api/books" or "let /api/books filter by title".
 compatibility: Bun 1.4+. Run commands from the repo root.
 ---
 
 # Add an endpoint to an API module
 
-For a new module, use the `api-module` skill instead. Rules and request flow are in `apps/api/README.md`.
+For a new module, use the `api-module` skill instead; the rules are in `src/api/README.md`.
 
 ## Steps
 
-1. **Schemas** in `<module>.schemas.ts` for what the endpoint takes and returns. Import `z` from
-   `@hono/zod-openapi`. Put the limits in the schema (`.min`, `.max`, `.email()`, …): invalid input then answers
-   `400 { error }` before the handler runs, with no checks in the handler.
+1. **Schemas** in `<module>.routes.ts`, exported, above the route that first uses them. Put the limits in the schema
+   (`.min`, `.max`, `.email()`, …), not in the handler. Query and path values arrive as strings: use
+   `z.coerce.number()` for numbers.
 
    ```ts
-   export const NewBookSchema = z.object({ title: z.string().min(1).max(200) }).openapi("NewBook");
+   /** The body that adds a book: its title, 1 to 200 characters. */
+   export const NewBookSchema = z.object({ title: z.string().min(1).max(200) }).meta({ ref: "NewBook" });
 
-   export const BookListQuerySchema = z.object({
-     q: z
-       .string()
-       .optional()
-       .openapi({ param: { name: "q", in: "query" }, example: "dune" }),
+   /** The query that filters the list: `q`, part of a title. */
+   export const BookListQuerySchema = z.object({ q: z.string().optional().meta({ example: "dune" }) });
+   ```
+
+2. **Service** function in `<module>.service.ts`, with a doc comment: plain values in and out, an `HTTPException`
+   (4xx) for a domain failure.
+
+3. **Route**, chained onto the module's router (a separate `booksRoutes.post(…)` statement works but is missing from
+   the web app's client types). A `describeRoute` declares every answer, including each error the service throws;
+   `validate` checks and documents each input, the 400 included:
+
+   | Input       | Middleware                               | Path         | Read with              |
+   | ----------- | ---------------------------------------- | ------------ | ---------------------- |
+   | Path params | `validate("param", BookIdSchema)`        | `/books/:id` | `c.req.valid("param")` |
+   | Query       | `validate("query", BookListQuerySchema)` | `/books`     | `c.req.valid("query")` |
+   | JSON body   | `validate("json", NewBookSchema)`        | `/books`     | `c.req.valid("json")`  |
+
+   ```ts
+   /** POST /books: adds a book, answering it with a 201. */
+   const createBook = describeRoute({
+     tags: ["books"],
+     summary: "Add a book",
+     responses: { 201: json(BookSchema, "The new book") },
    });
+
+   export const booksRoutes = new Hono()
+     .get("/books/:id", getBook, validate("param", BookIdSchema), (c) => {
+       const { id } = c.req.valid("param");
+       return c.json(findBook(id), 200);
+     })
+     .post("/books", createBook, validate("json", NewBookSchema), (c) => {
+       const { title } = c.req.valid("json");
+       return c.json(addBook(title), 201);
+     });
    ```
 
-   Query and path values arrive as strings: use `z.coerce.number()` (or similar) for numbers.
+   A route answering no body (a delete) declares `204: { description: "…" }` and answers `c.body(null, 204)`. One
+   worth abusing (a login, a sign-up) gets a stricter limit before it in the chain:
+   `.use("/books/import", rateLimit({ limit: 5, windowMs: 60_000 }))`, from `@/api/core/limits.ts`.
 
-2. **Service** function in `<module>.service.ts`: plain values in and out, `HTTPException` (4xx) for domain failures.
-
-3. **Route** in `<module>.routes.ts`, declaring every response, including each error status the service can throw
-   (with `ErrorSchema`) and `400` when there is input to validate:
-
-   - **Path params:** `params: BookParamsSchema` in `request`, the path written `/books/{id}`; read with
-     `c.req.valid("param")`.
-   - **Query:** `query: BookListQuerySchema` in `request`; read with `c.req.valid("query")`.
-   - **JSON body:** `body: { content: { "application/json": { schema: NewBookSchema } }, required: true }` in
-     `request`; read with `c.req.valid("json")`.
-
-   ```ts
-   const createBook = createRoute({
-     method: "post",
-     path: "/books",
-     request: { body: { content: { "application/json": { schema: NewBookSchema } }, required: true } },
-     responses: {
-       201: { content: { "application/json": { schema: BookSchema } }, description: "The new book" },
-       400: { content: { "application/json": { schema: ErrorSchema } }, description: "The book is invalid" },
-     },
-   });
-   ```
-
-4. **Chain** it onto the module's existing router, so its type reaches `AppType`:
-
-   ```ts
-   export const booksRoutes = createRouter()
-     .openapi(getBook, (c) => c.json(findBook(c.req.valid("param").id), 200))
-     .openapi(createBook, (c) => c.json(addBook(c.req.valid("json").title), 201));
-   ```
-
-   Don't register it in a separate statement (`booksRoutes.openapi(…)` on its own line): it works at runtime but is
-   missing from the web app's client types. Nothing changes in `app.ts`; the module is already mounted.
-
-   An endpoint worth abusing (a login, a sign-up, one that sends email) also gets a stricter rate limit, in the
-   chain before its route: `.use("/books/import", rateLimit({ limit: 5, windowMs: 60_000 }))`, with `rateLimit` from
-   `@api/core/rate-limit.ts`. Added after the route, it never runs. See "Rate limits" in `apps/api/README.md`.
-
-5. **Tests** in `apps/api/tests/modules/<module>/`: the success status and body, each declared error, and a 400 for
-   invalid input. A JSON body needs its content type:
+4. **Tests**: the service function in `<module>.service.test.ts`; in `<module>.routes.test.ts`, the new schemas'
+   rules (`.safeParse` on good and bad input) and the route: the success, each declared error, and a 400. A JSON body
+   needs its content type:
 
    ```ts
    const response = await createApp().request("/api/books", {
@@ -84,5 +78,5 @@ bun run check:fix && bun run check
 bun run test
 ```
 
-A type error on `c.json(…)` means the handler answers something the route doesn't declare: fix one of the two,
-never cast. To call the endpoint from the web app, use the `web-api-call` skill.
+The type-check doesn't compare a handler's answers with its `describeRoute`: when an answer changes, change its
+declaration too. To call the endpoint from the web app, use the `web-api-call` skill.

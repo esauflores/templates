@@ -1,8 +1,9 @@
 **/node_modules
 **/dist
 data
-**/tests
-bench
+**/*.test.ts
+**/*.test.tsx
+scripts/bench.ts
 .vitest
 coverage
 *.log

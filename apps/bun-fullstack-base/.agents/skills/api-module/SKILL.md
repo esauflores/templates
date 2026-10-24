@@ -1,42 +1,19 @@
 ---
 name: api-module
-description: Add a feature module to the Hono API in apps/api/src/modules/ (schemas, tables, service, routes, tests) and mount it, so it is validated by Zod, listed in /api/openapi.json and callable from the web app's typed client. Use when adding a new resource or feature to the API, e.g. "add a books API" or "add endpoints for invoices".
+description: Add a feature module to the Hono API in src/api/<module>/ (routes with their schemas, service, tables, tests) and mount it, so it is validated by Zod, listed in /api/openapi.json and callable from the web app's typed client. Use when adding a new resource or feature to the API, e.g. "add a books API" or "add endpoints for invoices".
 compatibility: Bun 1.4+. Run commands from the repo root.
 ---
 
 # Add an API module
 
-Read `apps/api/README.md` first: it holds the module rules (thin routes, services without HTTP, modules talk through
-services, `core/` never imports `modules/`), the request flow and the database. `apps/api/src/modules/hello/` is a
-working example, `apps/api/src/modules/notes/` one with a table.
+The rules are in `src/api/README.md`; `src/api/notes/` is the example to copy. Replace `books`/`Book` with the
+module's name. Paths in routes are written without `/api`: the app's base path adds it.
 
 ## Steps
 
-Replace `books`/`Book` with the module's name. Paths in routes are written without `/api`: the app's base path adds it.
-
-1. **Schemas**, `apps/api/src/modules/books/books.schemas.ts`. Import `z` from `@hono/zod-openapi`, not `zod`. Name
-   response and body schemas with `.openapi("Name")` so they appear as components in the OpenAPI document. Path and
-   query params need `.openapi({ param: { name, in } })`.
-
-   ```ts
-   import { z } from "@hono/zod-openapi";
-
-   export const BookSchema = z
-     .object({ id: z.number().int().openapi({ example: 1 }), title: z.string().openapi({ example: "Dune" }) })
-     .openapi("Book");
-
-   export const BookParamsSchema = z.object({
-     id: z.coerce
-       .number()
-       .int()
-       .openapi({ param: { name: "id", in: "path" }, example: 1 }),
-   });
-   ```
-
-2. **Table**, when the module stores data, `apps/api/src/modules/books/books.table.ts`, with Drizzle's
-   `drizzle-orm/sqlite-core`. Then `bun run db:generate` writes the migration into `apps/api/drizzle/` (commit it);
-   the server applies it at start, and the tests on their in-memory database. Never edit a migration that exists:
-   change the table and generate another.
+1. **Tables**, when the module stores data, in `src/api/books/books.tables.ts`. Then `bun run db:generate` writes the
+   migration into `src/api/core/migrations/` (commit it), which the server applies at start. Never edit a migration
+   that exists: change the table and generate another.
 
    ```ts
    import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
@@ -47,21 +24,20 @@ Replace `books`/`Book` with the module's name. Paths in routes are written witho
    });
    ```
 
-3. **Service**, `apps/api/src/modules/books/books.service.ts`. Plain functions: no Hono `Context`, no `c`. Only
-   this module's service queries its tables, through `db` from `@api/core/db.ts`. A domain failure throws
-   `HTTPException` with a 4xx status; `core/errors.ts` turns it into `{ error: message }`. A query that runs on most
-   requests is prepared once at the top of the service (`sql.placeholder`, `.prepare()`), as in
-   `modules/notes/notes.service.ts`; values a column's `$defaultFn` would fill go in as placeholders too. The driver
-   is synchronous (`bun:sqlite`): the queries return their rows, so there's no `await` and no `async`.
+2. **Service**, `src/api/books/books.service.ts`: plain functions with doc comments, no Hono. Only this module's
+   service queries its tables, through `db` from `@/api/core/db.ts`, and the queries are synchronous (no `async`). A
+   domain failure throws an `HTTPException` with a 4xx status, which the API answers as `{ error: message }`. A query
+   that runs on most requests is prepared once, right above its function, as in `src/api/notes/notes.service.ts`.
 
    ```ts
    import { eq } from "drizzle-orm";
    import { HTTPException } from "hono/http-exception";
 
-   import { db } from "@api/core/db.ts";
+   import { db } from "@/api/core/db.ts";
 
-   import { books } from "./books.table.ts";
+   import { books } from "./books.tables.ts";
 
+   /** A book by its id; a 404 HTTPException when there's no such book. */
    export function findBook(id: number) {
      const [book] = db.select().from(books).where(eq(books.id, id)).all();
      if (!book) throw new HTTPException(404, { message: "No such book" });
@@ -69,59 +45,62 @@ Replace `books`/`Book` with the module's name. Paths in routes are written witho
    }
    ```
 
-4. **Routes**, `apps/api/src/modules/books/books.routes.ts`. One `createRoute` per endpoint, every possible response
-   declared (errors with `ErrorSchema`), and one router from `createRouter()` with the routes chained. Never
-   `new Hono()` or a bare `new OpenAPIHono()`: those skip the 400 validation answer, and plain Hono routers are left
-   out of the document. Handlers stay one expression: read `c.req.valid(…)`, call the service, `c.json(result, status)`
-   with an explicit status.
+3. **Routes**, `src/api/books/books.routes.ts`: the Zod schemas, each above the route that first uses it, then one
+   `new Hono()` router with the routes chained. For each route:
+   - a `describeRoute` declaring every answer, with `json(schema, description)` and `error(description)`: the OpenAPI
+     document can't read answers from the handler. `tags` groups the module in Swagger UI (`/api/docs`);
+   - a `validate(target, schema)` per input, which checks it (`400 { error }`) and documents it;
+   - a thin handler: destructure `c.req.valid(…)`, call the service, `c.json(result, status)`.
+
+   `.meta({ ref: "Book" })` names a schema in the document, `.meta({ example })` gives an example. Export the schemas,
+   so the routes test can check their rules.
 
    ```ts
-   import { createRoute } from "@hono/zod-openapi";
+   import { Hono } from "hono";
+   import { describeRoute } from "hono-openapi";
+   import { z } from "zod";
 
-   import { createRouter, ErrorSchema } from "@api/core/openapi.ts";
+   import { error, json, validate } from "@/api/core/router.ts";
 
-   import { BookParamsSchema, BookSchema } from "./books.schemas.ts";
    import { findBook } from "./books.service.ts";
 
-   const getBook = createRoute({
-     method: "get",
-     path: "/books/{id}",
-     request: { params: BookParamsSchema },
-     responses: {
-       200: { content: { "application/json": { schema: BookSchema } }, description: "The book" },
-       404: { content: { "application/json": { schema: ErrorSchema } }, description: "No such book" },
-     },
+   /** A book as the API answers it, named `Book` in the OpenAPI document. */
+   export const BookSchema = z
+     .object({ id: z.number().int().meta({ example: 1 }), title: z.string().meta({ example: "Dune" }) })
+     .meta({ ref: "Book" });
+
+   /** A book's id, in the path: a positive whole number. */
+   export const BookIdSchema = z.object({ id: z.coerce.number().int().positive().meta({ example: 1 }) });
+
+   /** GET /books/{id}: a book, 404 when there's no such book. */
+   const getBook = describeRoute({
+     tags: ["books"],
+     summary: "Get a book",
+     responses: { 200: json(BookSchema, "The book"), 404: error("No such book") },
    });
 
-   export const booksRoutes = createRouter().openapi(getBook, (c) => c.json(findBook(c.req.valid("param").id), 200));
+   export const booksRoutes = new Hono().get("/books/:id", getBook, validate("param", BookIdSchema), (c) => {
+     const { id } = c.req.valid("param");
+     return c.json(findBook(id), 200);
+   });
    ```
 
-   More endpoints in the same module: see the `api-endpoint` skill.
+   More routes: the `api-endpoint` skill.
 
-5. **Mount** it in `apps/api/src/app.ts`: import `booksRoutes` and append `.route("/", booksRoutes)` to the chain that
-   `createApp` returns. Keep that chain one expression ending in `return`: it is what gives `AppType` the routes, and
-   a route mounted outside it works at runtime but is missing from the web app's client types.
+4. **Mount** it in `src/api/app.ts` with `app.route("/", booksRoutes)`, and give the web app its client in
+   `src/web/lib/api.ts`: `books: hc<typeof booksRoutes>("/api").books` in `api`, with `import type { booksRoutes }`.
 
-6. **Tests**, `apps/api/tests/modules/books/books.test.ts`, importing from `vite-plus/test`. Test the service directly,
-   and the routes through `createApp().request("/api/books/1")`: the success case, each declared error status, and a
-   400 for invalid input. Each test file has a fresh in-memory database, so create the rows a test reads.
+5. **Tests**, next to the code: `books.service.test.ts` calls the service directly; `books.routes.test.ts` checks the
+   schemas' rules (`.safeParse` on good and bad input) and the routes through `createApp().request("/api/books/1")`:
+   the success, each declared error, and a 400. With tables, copy `src/api/notes/notes.tables.test.ts` to
+   `books.tables.test.ts`. Each test file has a fresh in-memory database, so create the rows a test reads.
 
 ## Verify
 
 ```sh
-bun run check:fix && bun run check   # format, lint, type-check
+bun run check:fix && bun run check
 bun run test
 ```
 
-`bun run check` fails when a handler's `c.json(…)` doesn't match a declared response (status and shape). Fix the
-handler or declare the response; never cast around it. Then confirm the module is in the document:
-
-```sh
-bun -e '
-  import { createApp } from "api";
-  const doc = await (await createApp().request("/api/openapi.json")).json();
-  console.log(Object.keys(doc.paths));
-'
-```
-
-To call the module from the web app, use the `web-api-call` skill.
+The type-check doesn't compare a handler's answers with its `describeRoute`: check they match. The module then shows
+in Swagger UI at `/api/docs` (`bun run dev`). To call it from the web app, use the `web-api-call` skill.

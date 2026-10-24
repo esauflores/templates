@@ -2,22 +2,15 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite-plus";
 import { playwright } from "vite-plus/test/browser-playwright";
 
-const path = (relative: string) => fileURLToPath(new URL(relative, import.meta.url));
-
 /**
- * Vite+ checks and tests the code: `vp check` formats, lints and type-checks server/, apps/api and apps/web, each with
- * its tsconfig.json (all extend the root's; web swaps Bun's types for DOM and JSX). `vp test` runs the server
- * tests (a production bundle of the page, on Bun), the api tests (no DOM) and the web tests (headless Chromium,
- * through Playwright), each test file on a database of its own, in memory. `vp test bench` runs bench/'s in-process
- * benchmarks. Serving and bundling the web app is Bun's job, not Vite's (server/, with Tailwind as a Bun plugin, see
- * its bunfig.toml).
+ * Vite+ checks and tests the code: `vp check` formats, lints and type-checks everything, with tsconfig.json (and
+ * src/web/tsconfig.json, which swaps Bun's types for DOM and JSX). `vp test` runs the tests next to the code they test:
+ * the server and API tests on Bun (no DOM), the web tests in headless Chromium through Playwright, each test file on
+ * a database of its own, in memory. Serving and bundling the web app is Bun's job, not Vite's (src/server.ts, with Tailwind as a Bun plugin, see bunfig.toml).
  */
 export default defineConfig({
   resolve: {
-    alias: {
-      "@api": path("./apps/api/src"),
-      "@web": path("./apps/web/src"),
-    },
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
   test: {
     env: { DATABASE_PATH: ":memory:" },
@@ -26,28 +19,15 @@ export default defineConfig({
         extends: true,
         test: {
           name: "server",
-          root: path("./server"),
-        },
-      },
-      {
-        extends: true,
-        test: {
-          name: "api",
-          root: path("./apps/api"),
-        },
-      },
-      {
-        extends: true,
-        test: {
-          name: "bench",
-          root: path("./bench"),
+          include: ["src/**/*.test.ts"],
+          exclude: ["src/web/**"],
         },
       },
       {
         extends: true,
         test: {
           name: "web",
-          root: path("./apps/web"),
+          include: ["src/web/**/*.test.{ts,tsx}"],
           browser: {
             enabled: true,
             provider: playwright(),
@@ -64,12 +44,25 @@ export default defineConfig({
     sortImports: {
       order: "asc",
       newlinesBetween: true,
-      internalPattern: ["@api/", "@web/"],
+      internalPattern: ["@/"],
       groups: [["builtin", "external"], "internal", ["parent", "sibling", "index"], "style", "unknown"],
     },
   },
   lint: {
     categories: { correctness: "error" },
     options: { typeAware: true, typeCheck: true },
+    overrides: [
+      {
+        // The web app takes only the API's types (`import type { notesRoutes }`): importing its code would bundle the
+        // server (and bun:sqlite) into the page.
+        files: ["src/web/**"],
+        rules: {
+          "no-restricted-imports": [
+            "error",
+            { patterns: [{ group: ["@/api/**"], allowTypeImports: true, message: "Only import type from @/api" }] },
+          ],
+        },
+      },
+    ],
   },
 });

@@ -1,0 +1,11 @@
+{
+  // The web app runs in the browser: DOM and JSX instead of Bun's types. Paths come from the root's (@/* is src/*).
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": [],
+    "jsx": "react-jsx"
+  },
+  "include": ["."],
+  "exclude": []
+}

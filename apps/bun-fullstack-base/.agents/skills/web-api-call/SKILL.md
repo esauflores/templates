@@ -1,23 +1,24 @@
 ---
 name: web-api-call
-description: Call the API from the React web app with Hono's typed client (api and call in apps/web/src/lib/api.ts) and TanStack Query, show its errors, and test it with mocked fetch. Use when a page or component needs data from /api or sends data to it.
+description: Call the API from the React web app with Hono's typed client (api and call in src/web/lib/api.ts) and TanStack Query, show its errors, and test it with mocked fetch. Use when a page or component needs data from /api or sends data to it.
 compatibility: Bun 1.4+. Run commands from the repo root. Web tests need Chromium once (bunx playwright install chromium).
 ---
 
 # Call the API from the web app
 
-The client is typed from the API's routes (`AppType`), so request params and response bodies need no hand-written
-types, and a renamed field or param is a type error. If an endpoint doesn't exist yet, add it first (`api-module` or
-`api-endpoint` skill).
+The client is typed from the API's routes, so params and bodies need no hand-written types. If an endpoint doesn't
+exist yet, add it first (`api-module` or `api-endpoint` skill).
 
 ## The client
 
-`apps/web/src/lib/api.ts` exports:
+`src/web/lib/api.ts` exports:
 
-- `api`: the client. Path segments are properties, params are `[":name"]`, the method is `$get`/`$post`/….
-  `api.books[":id"].$get({ param: { id } })` calls `GET /api/books/{id}`.
+- `api`: one typed client per API module (`api.notes`, `api.hello`, …). Path segments are properties, params are
+  `[":name"]`, the method is `$get`/`$post`/…. `api.books[":id"].$get({ param: { id } })` calls `GET /api/books/{id}`.
+  A new module needs its line in `api` first: `books: hc<typeof booksRoutes>("/api").books`, with
+  `import type { booksRoutes }`.
 - `call(request)`: awaits a client call and returns the typed body, or throws `ApiError` (`status`, and `message` from
-  the API's `{ error }`) on a non-2xx answer.
+  the API's `{ error }`) on a non-2xx answer. A `204` (a delete) has no body: it returns `undefined`.
 
 | Input       | Client call                                                        |
 | ----------- | ------------------------------------------------------------------ |
@@ -52,16 +53,15 @@ const addBook = useMutation({
 
 Invalidate the queries the change affects, so lists refetch. Show `addBook.error.message` the same way.
 
-A new page also needs a route in `apps/web/src/main.tsx`: a `<Route path="/books" element={<Books />} />` in
+A new page also needs a route in `src/web/main.tsx`: a `<Route path="/books" element={<Books />} />` in
 `<Routes>`, before the `*` fallback.
 
 ## Tests
 
-In `apps/web/tests/`, mirroring `apps/web/src/` (a page in `src/pages/Books.tsx` is tested in
-`tests/pages/books.test.tsx`).
-`mockApi` from `tests/support/fetch.ts` replaces `fetch` with handlers keyed by `"METHOD /path"` (no query string),
+Next to the code they test: a page in `src/web/pages/Books.tsx` is tested in `src/web/pages/Books.test.tsx`.
+`mockApi` from `src/web/testing.ts` replaces `fetch` with handlers keyed by `"METHOD /path"` (no query string),
 receives the parsed JSON body, and returns the calls made. Wrap the component in a `QueryClientProvider` with
-`createTestQueryClient()` from `tests/support/query.ts` (no retries), and unstub fetch after each test. Keep the
+`createTestQueryClient()`, from the same file (no retries), and unstub fetch after each test. Keep the
 mocked data in a variable the handlers share, so a refetch after a change sees it.
 
 ```tsx
@@ -69,10 +69,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 
-import { Books } from "@web/pages/Books.tsx";
-
-import { mockApi } from "../support/fetch.ts";
-import { createTestQueryClient } from "../support/query.ts";
+import { Books } from "@/web/pages/Books.tsx";
+import { createTestQueryClient, mockApi } from "@/web/testing.ts";
 
 afterEach(() => {
   cleanup();
