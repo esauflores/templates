@@ -81,6 +81,7 @@ scripts/
 tsconfig.json       TypeScript settings and the @/ alias, extended by src/web/tsconfig.json
 vite.config.ts      Vite+ format, lint and test settings: api (Bun) and web (Chromium) test projects
 Dockerfile          the production image
+bench.Dockerfile    the benchmark from inside a cloud project (see "On Railway" under Benchmark)
 .env.example        the settings and their defaults, to copy to .env when changing one
 ```
 
@@ -157,6 +158,32 @@ brackets:
   writing to a terminal or a log collector costs more.
 - One process per database: SQLite serializes writers, so a second instance on the same file would wait, not help.
 - A power-saving profile cuts every number by half or more. Numbers vary between machines.
+
+### On Railway
+
+The same routes on [Railway](https://railway.com), loaded from inside the project: the app from the `Dockerfile`
+with a volume at `/data`, and a second service built from `bench.Dockerfile` (oha, 4 vCPU) loading it over the
+private network, so nothing goes out as paid egress. That service first fills the database to a million notes
+through the API, then runs 3 rounds of 5 s per route, all on the one running server. `us-west2`, 100 connections,
+`RATE_LIMIT=0`. Medians, with the range in brackets:
+
+|                                 | 0.5 vCPU, 0.5 GB                    | 1 vCPU, 1 GB                        |
+| ------------------------------- | ----------------------------------- | ----------------------------------- |
+| `/` (index.html)                | 34k req/s [34–34k], p99 24.4 ms     | 38k req/s [37–47k], p99 7.3 ms      |
+| JS bundle                       | 31k req/s [30–33k], p99 25.0 ms     | 47k req/s [44–47k], p99 5.7 ms      |
+| `/api/hello/{name}`             | 11k req/s [11–11k], p99 40.4 ms     | 25k req/s [23–25k], p99 11.8 ms     |
+| `GET /api/notes` (a page of 20) | 4.9k req/s [4.8–5.2k], p99 68.1 ms  | 13k req/s [12–14k], p99 19.4 ms     |
+| `POST /api/notes`               | 4.3k req/s [4.1–4.9k], p99 105.4 ms | 3.9k req/s [3.3–5.0k], p99 154.0 ms |
+
+- A Railway vCPU is a share of a server's, slower than a laptop core: the API routes do about half the local numbers
+  on 1 vCPU, and half again on 0.5, where the p99 triples. 2 vCPU measured the same as 1: the server's JavaScript
+  runs on one thread, and it used 0.95 vCPU at most.
+- Writes stay at 4–5k a second whatever the CPU, as SQLite's checkpoints sync to the volume, slower than a laptop's
+  SSD; the seeding ran at the same 4.6k a second.
+- The static files cost the server little either way: around 45k req/s is near what the private network and oha
+  carry.
+- The request log goes past Railway's 500 lines a second, which drops the rest, and writing it still costs CPU.
+- The server used about 110 MB, so 0.5 GB is plenty.
 
 ## Conventions
 
