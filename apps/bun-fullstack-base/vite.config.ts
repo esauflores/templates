@@ -6,10 +6,10 @@ import { playwright } from "vite-plus/test/browser-playwright";
 /**
  * Vite+ checks and tests the code: `vp check` formats, lints and type-checks everything, with tsconfig.json (and
  * src/web/tsconfig.json, which swaps Bun's types for DOM and JSX). `vp test` runs the tests next to the code they test:
- * the server and API tests on Bun (no DOM), the web tests in headless Chromium through Playwright; each server test file
- * gets a database of its own, in memory. The web tests' API is mocked in the browser by MSW (src/web/mocks.ts, started
- * by src/web/mocks.setup.ts), so they need no server, port or database. Serving and bundling the web app is Bun's job,
- * not Vite's (src/server.ts), and the stylesheet is Tailwind's own CLI (scripts/build.ts, scripts/dev.ts).
+ * the API tests on Bun (no DOM), the web tests in headless Chromium through Playwright; each API test file gets a
+ * database of its own, in memory. The web tests' API is mocked in the browser by MSW (src/web/mocks/worker.ts, started
+ * by src/web/mocks/setup.ts), so they need no server, port or database. Serving and bundling the web app is Bun's job,
+ * not Vite's (src/server.ts), and the stylesheet is Tailwind's own CLI (scripts/css.ts).
  */
 const root = fileURLToPath(new URL(".", import.meta.url));
 
@@ -37,9 +37,8 @@ export default defineConfig({
       {
         extends: true,
         test: {
-          name: "server",
-          include: ["src/**/*.test.ts"],
-          exclude: ["src/web/**"],
+          name: "api",
+          include: ["src/api/**/*.test.ts"],
         },
       },
       {
@@ -47,7 +46,7 @@ export default defineConfig({
         test: {
           name: "web",
           include: ["src/web/**/*.test.{ts,tsx}"],
-          setupFiles: [fileURLToPath(new URL("./src/web/mocks.setup.ts", import.meta.url))],
+          setupFiles: [fileURLToPath(new URL("./src/web/mocks/setup.ts", import.meta.url))],
           browser: {
             enabled: true,
             provider: playwright(),

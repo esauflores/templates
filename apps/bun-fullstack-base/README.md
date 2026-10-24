@@ -46,8 +46,8 @@ browser ── :3000 ── src/server.ts
 - **One origin, one package.** The page and the API share a port (no CORS, no proxy) and a `package.json`. The web
   app may import only types from `@/api/`, a lint rule, so none of the API's code reaches the page.
 - **Bun bundles the web app**, on request with hot reload in dev, ahead of time for production (`scripts/build.ts`).
-  Vite+ only checks and tests. The stylesheet is not Bun's: Tailwind's own CLI compiles it (`scripts/build.ts`,
-  `scripts/dev.ts`), then Bun bundles it with the page like any other file.
+  Vite+ only checks and tests. The stylesheet is not Bun's: Tailwind's own CLI compiles it (`scripts/css.ts`, run
+  by `scripts/build.ts` and `scripts/dev.ts`), then Bun bundles it with the page like any other file.
 - **Typed and documented as it's written.** Routes validate their input with Zod (`400 { error }` when it's invalid),
   the web app's clients take their types from the routes, and `/api/openapi.json` (Swagger UI at `/api/docs`) is built
   from them.
@@ -75,10 +75,11 @@ src/
 scripts/
 ├── dev.ts          bun run dev: the server, and the stylesheet rebuilt as src/web changes
 ├── build.ts        the production build into dist/, the stylesheet compiled first
+├── css.ts          the stylesheet, compiled by Tailwind's CLI for dev.ts and build.ts
 └── bench.ts        the benchmark: the built server under HTTP load with oha, run locally
 .agents/skills/     the steps for adding API modules, endpoints and API calls
 tsconfig.json       TypeScript settings and the @/ alias, extended by src/web/tsconfig.json
-vite.config.ts      Vite+ format, lint and test settings: server (Bun) and web (Chromium) test projects
+vite.config.ts      Vite+ format, lint and test settings: api (Bun) and web (Chromium) test projects
 Dockerfile          the production image
 .env.example        the settings and their defaults, to copy to .env when changing one
 ```
@@ -93,8 +94,8 @@ Dockerfile          the production image
   a request, and `dist/` runs without `node_modules`.
 - **Production** (`bun run start`) serves the page's files from memory, from any working directory: hashed files
   cached for a year, `index.html` and `public/` checked on every load. Each is one fixed answer, the same bytes to every
-  client, so Bun serves it on its fast path and answers the ETag and the 304 itself. Compression is the reverse proxy's
-  (see [Docker](#docker)), not this process's.
+  client, so Bun serves it on its fast path and answers the ETag and the 304 itself. The text files are gzipped once,
+  by the build, and always answered so (every browser accepts gzip): no compression runs per request.
 
 ## Docker
 
@@ -110,10 +111,11 @@ build. The database lives in the `/data` volume: mount one there, or it's lost w
 with `SQLiteError: unable to open database file`. The `HEALTHCHECK` calls `/api/health`, which reads the database
 too.
 
-Put a reverse proxy (Caddy, nginx, your platform's) in front: it terminates TLS, compresses the answers (the page and
-the API alike: the server sends both uncompressed), and sets security headers on the page, which the app only sets on
-`/api`. With Caddy that's `encode zstd gzip`; with nginx, `gzip on` and its MIME types. The image sets
-`TRUST_PROXY=true` for it (see [Rate limits](src/api/README.md#rate-limits)).
+Put a reverse proxy (Caddy, nginx, your platform's) in front: it terminates TLS, compresses the API's answers (Caddy:
+`encode zstd gzip`; nginx: `gzip on` and its MIME types), passes the page's already gzipped files through, and can add
+headers of its own (HSTS). Run the image with `-e TRUST_PROXY=true` behind it, so the rate limit counts the client's
+IP, not the proxy's ([Rate limits](src/api/README.md#rate-limits)); it's off by default, as without a proxy any client
+could send its own X-Forwarded-For.
 
 ## Benchmark
 
@@ -123,27 +125,28 @@ file), the JS bundle (a large one), `/api/hello` (the API's own cost, no databas
 adding a note (a write). A route doing a different kind of work (a search, a join, an upload) earns a row; another
 write by id wouldn't.
 
-Bun 1.4.3 on an Intel i5-1135G7 (Linux, performance power profile), the server pinned to one core and oha on four
-others (`SERVER_CPU`, `LOAD_CPUS` in `bench.ts`), 100 connections, 5 s per round, no rate limit (`RATE_LIMIT=0`).
-Medians, with the range in brackets:
+Each route is measured twice: straight to the server, and behind [Caddy](https://caddyserver.com) with `encode zstd
+gzip` (`caddy` must be installed), as in production. Bun 1.4.3 on an Intel i5-1135G7 (Linux, performance power
+profile), the server pinned to one core, Caddy to another and oha to four others (`SERVER_CPU`, `PROXY_CPUS`,
+`LOAD_CPUS` in `bench.ts`), 100 connections, 5 s per round, no rate limit (`RATE_LIMIT=0`). Medians, with the range in
+brackets:
 
-|                                 | Built (`dist/`)                       |
-| ------------------------------- | ------------------------------------- |
-| Ready to answer                 | 50 ms [47–53], each on a new database |
-| First page request              | 0.2 ms                                |
-| Memory, started / loaded        | 50 / 65 MB RSS, own 12 / 26 MB        |
-| `/` (index.html)                | 274k req/s [271–275k], p99 0.8 ms     |
-| JS bundle (338 KB)              | 26k req/s [26–26k], p99 7.2 ms        |
-| `/api/hello/{name}`             | 54k req/s [52–55k], p99 5.0 ms        |
-| `GET /api/notes` (a page of 20) | 22k req/s [22–22k], p99 9.9 ms        |
-| `POST /api/notes`               | 25k req/s [24–26k], p99 9.0 ms        |
+|                                    | Built (`dist/`)                       | Behind Caddy                    |
+| ---------------------------------- | ------------------------------------- | ------------------------------- |
+| Ready to answer                    | 50 ms [48–76], each on a new database |                                 |
+| First page request                 | 0.2 ms                                |                                 |
+| Memory, started / loaded           | 50 / 65 MB RSS, own 12 / 26 MB        |                                 |
+| `/` (index.html)                   | 261k req/s [214–277k], p99 0.9 ms     | 17k req/s [17–18k], p99 15.5 ms |
+| JS bundle (338 KB, 107 KB gzipped) | 76k req/s [75–76k], p99 2.5 ms        | 11k req/s [11–11k], p99 25.1 ms |
+| `/api/hello/{name}`                | 61k req/s [57–62k], p99 4.1 ms        | 14k req/s [13–14k], p99 19.8 ms |
+| `GET /api/notes` (a page of 20)    | 22k req/s [22–23k], p99 9.4 ms        | 14k req/s [13–14k], p99 18.5 ms |
+| `POST /api/notes`                  | 26k req/s [25–26k], p99 9.0 ms        | 12k req/s [12–13k], p99 21.1 ms |
 
 - First page request and memory are measured by hand. Most of the memory is Bun's own executable, shared between
   instances; the server's own is 12 MB idle and 26 MB under load.
-- The static routes answer each file as it is, which is what lets Bun answer them without running any code per request:
-  compressing them here would cost most of that (a response built per request measures at a third to a half of a fixed
-  one), so compression is the proxy's job and isn't in these numbers. That's why the JS bundle row moves its 338 KB
-  uncompressed: behind a proxy's gzip it's 105 KB a response, and most of that row's time goes away.
+- The build's gzip copies are what make the static rows: without them the JS bundle measured 26k req/s straight
+  (three times the bytes) and 0.4k behind Caddy, which compressed its 338 KB again on every request.
+- Behind Caddy, the proxy is most of the cost: one more hop per request, on a core of its own.
 - On the database routes the query is most of the time. Two settings keep it fast: the queries are prepared once
   (`notes.service.ts`), about half again the requests a second, and `synchronous = NORMAL` (`core/db.ts`) syncs the
   disk at checkpoints, which keeps writes in the tens of thousands a second rather than a few hundred.
@@ -158,5 +161,5 @@ Medians, with the range in brackets:
 - Tests sit next to the code they test, as `<name>.test.ts` (`.test.tsx` for components).
 - Comments go above the code they explain (doc comments), not inside function bodies or at the end of a line.
 - Lines wrap at 120 characters; `bun run check:fix` formats and sorts imports.
-- A script that runs a package's binary says `bun --bun` (`vp`, `drizzle-kit`), so it runs on Bun, the runtime the app
-  runs on, instead of the Node its shebang asks for. There's no bunfig.toml to do it for every script.
+- Every script says `bun --bun`, so a package's binary (`vp`, `drizzle-kit`) runs on Bun, the runtime the app runs on,
+  instead of the Node its shebang asks for. There's no bunfig.toml to do it for every script.

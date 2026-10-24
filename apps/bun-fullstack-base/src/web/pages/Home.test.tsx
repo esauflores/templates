@@ -3,11 +3,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import { worker } from "@/web/mocks.ts";
+import { worker } from "@/web/mocks/worker.ts";
 import { Home } from "@/web/pages/Home.tsx";
 
 /**
- * The page, against the handlers of mocks.ts (MSW, in the browser): the health check and the greeting answer as the API
+ * The page, against the handlers of mocks/worker.ts (MSW, in the browser): the health check and the greeting answer as the API
  * would, and a test overrides one of them for what the real API never answers (a 502, a health check that's down).
  * Retries are off, so an error reaches the screen at once.
  */

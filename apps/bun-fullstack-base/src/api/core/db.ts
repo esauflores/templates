@@ -20,12 +20,15 @@ if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
  * - synchronous = NORMAL syncs the disk at checkpoints, not on every commit: about 40 times the writes a second of
  *   FULL. A crash of the process loses nothing; a power cut can lose the last commits, never the file.
  * - foreign_keys = ON makes a column's `.references()` hold (SQLite leaves it off by default).
+ * - busy_timeout = 5000: another connection writing the file (the old container in a rolling deploy, a backup, the
+ *   sqlite3 CLI) is waited for, up to 5 s, rather than failing at once with SQLITE_BUSY.
  */
 export const db = drizzle(path);
 
 db.run(sql`PRAGMA journal_mode = WAL`);
 db.run(sql`PRAGMA synchronous = NORMAL`);
 db.run(sql`PRAGMA foreign_keys = ON`);
+db.run(sql`PRAGMA busy_timeout = 5000`);
 
 /** What each pragma must read back as, checked at start rather than run with the wrong setting. */
 const expected: Record<string, readonly unknown[]> = {

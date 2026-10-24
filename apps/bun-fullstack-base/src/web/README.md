@@ -6,7 +6,7 @@ routes are its types. `pages/Home.tsx` is the example to copy.
 
 | Piece   | What                                                                                     |
 | ------- | ---------------------------------------------------------------------------------------- |
-| UI      | React 19, [shadcn/ui](https://ui.shadcn.com) components on Radix, Tailwind CSS 4         |
+| UI      | React 19, [shadcn/ui](https://ui.shadcn.com) components, Tailwind CSS 4                  |
 | Routing | [React Router](https://reactrouter.com) (`<BrowserRouter>` and `<Routes>` in `main.tsx`) |
 | Data    | [TanStack Query](https://tanstack.com/query), over Hono's typed client                   |
 | Tests   | Vitest browser mode (through Vite+), in headless Chromium, with Testing Library          |
@@ -22,24 +22,27 @@ src/web/
 ├── env.d.ts         Bun's import.meta.hot, as main.tsx uses it
 ├── components.json  shadcn's settings: where its components go, the stylesheet, the aliases
 ├── components/      the app's own components (ApiStatus, ThemeToggle)
-│   └── ui/          shadcn components, added with bunx shadcn add (yours to edit)
+│   └── ui/          shadcn components, once added with bunx shadcn add (yours to edit)
 ├── lib/
 │   ├── api.ts       api (a typed client per API module), call(), ApiError, createQueryClient()
 │   ├── theme.ts     light or dark: the .dark class on <html>, saved in localStorage
 │   └── utils.ts     cn(): merges Tailwind classes, used by the components
+├── mocks/           the API, mocked for the tests (see Tests)
+│   ├── worker.ts    MSW's handlers, one per endpoint, and its worker
+│   └── setup.ts     starts the worker before each test file, resets its handlers after each test
 ├── pages/           one component per route
 ├── styles/
-│   ├── fonts.css       Geist and Geist Mono, Latin only (inlined into the CSS when it's compiled)
-│   ├── global.css      Tailwind, and the theme (colors, fonts, radius) as CSS variables, light and dark
-│   ├── shadcn.css      shadcn's Tailwind additions, copied so shadcn stays a dev tool
+│   ├── fonts.css       Geist and Geist Mono, Latin only (inlined by Bun when it bundles the CSS)
+│   ├── global.css      Tailwind, shadcn's additions (from the shadcn package), and the theme (colors, fonts,
+│   │                   radius) as CSS variables, light and dark
 │   └── generated.css   generated: Tailwind's compilation of the above, imported by main.tsx (ignored by git)
 └── tsconfig.json    DOM and JSX in place of Bun's types
 ```
 
 Every path that isn't `/api` or a file gets `index.html`, and React Router picks the page; unknown ones are sent to `/`.
 Tailwind finds the classes in the source files, so there's no Tailwind config: `bun run dev` and `bun run build` run
-its CLI over `styles/global.css` into `styles/generated.css` (ignored by git), which `main.tsx` imports so Bun bundles it
-with the page, and dev rebuilds it as the sources change.
+its CLI (`scripts/css.ts`) over `styles/global.css` into `styles/generated.css` (ignored by git), which `main.tsx`
+imports so Bun bundles it with the page, and dev rebuilds it as the sources change.
 
 ## Calling the API
 
@@ -70,13 +73,13 @@ scans (`src/`, from the repo root), or it won't be in the stylesheet. Next to sh
 ## Tests
 
 They run in headless Chromium (`bunx playwright install chromium` once), with the API mocked in the browser by
-[MSW](https://mswjs.io): `mocks.ts` has one handler per endpoint, `mocks.setup.ts` starts the service worker before each
-test file (vite.config.ts serves its script and lists the setup file), and a test overrides a route for its own case:
+[MSW](https://mswjs.io): `mocks/worker.ts` has one handler per endpoint, `mocks/setup.ts` (vite.config.ts's
+`setupFiles`) starts its service worker before each test file, and a test overrides a route for its own case:
 
 ```tsx
 import { http, HttpResponse } from "msw";
 
-import { worker } from "@/web/mocks.ts";
+import { worker } from "@/web/mocks/worker.ts";
 
 worker.use(http.get("/api/books", () => HttpResponse.json({ error: "Nope" }, { status: 503 })));
 ```
@@ -85,4 +88,5 @@ worker.use(http.get("/api/books", () => HttpResponse.json({ error: "Nope" }, { s
 - **Error paths the real API never answers** — a 502 with no body, a health check that's down, a timeout — are one
   `worker.use(…)` away.
 - **A missing handler is loud:** anything unmocked answers `500 { error: "No handler for …" }`, which shows on screen.
-- Handlers carry state when a test needs it (a list that grows after a POST); they're reset between tests.
+- The default handlers hold no state: a test that writes and reads back (a list that grows after a POST) overrides
+  both routes over a list of its own; the overrides are reset between tests.

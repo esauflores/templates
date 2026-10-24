@@ -7,7 +7,10 @@ import { fileURLToPath } from "node:url";
  * The HTTP benchmark behind the README's table: the built server (dist/) under load from
  * [oha](https://github.com/hatoo/oha), each route for ROUNDS rounds, each round on a fresh server and a fresh database
  * of 50 notes, then the median and the range. `bun run bench` builds first, then runs this.
- * - The server is pinned to one core and oha to others (Linux, with taskset), so the numbers are one core's.
+ * - Each route twice: straight to the server, then behind [Caddy](https://caddyserver.com) compressing the answers
+ *   (`encode zstd gzip`), as the README has it in production, so the second column is what a client gets.
+ * - The server is pinned to one core, Caddy to another and oha to the rest (Linux, with taskset), so the server's
+ *   numbers are one core's.
  * - The API runs without its rate limit (RATE_LIMIT=0), as all the load comes from one client.
  * - Run it on a quiet machine, plugged in, on a performance power profile: a power-saving one halves every number.
  */
@@ -15,7 +18,9 @@ const ROUNDS = 3;
 const SECONDS = 5;
 const CONNECTIONS = 100;
 const PORT = 3130;
+const PROXY_PORT = 3131;
 const SERVER_CPU = "1";
+const PROXY_CPUS = "0,4";
 const LOAD_CPUS = "2,3,6,7";
 
 const dist = fileURLToPath(new URL("../dist", import.meta.url));
@@ -50,10 +55,10 @@ function spawn(
   return Bun.spawn(pinned, { cwd: dist, env: { ...process.env, ...env }, stdout: output, stderr: "ignore" });
 }
 
-/** Waits for the server to answer its health check, and answers how long that took from `since`. */
-async function ready(since: number): Promise<number> {
+/** Waits for the server (or Caddy) to answer its health check, and answers how long that took from `since`. */
+async function ready(port: number, since: number): Promise<number> {
   for (;;) {
-    const ok = await fetch(`http://127.0.0.1:${PORT}/api/health`).then(
+    const ok = await fetch(`http://127.0.0.1:${port}/api/health`).then(
       (response) => response.ok,
       () => false,
     );
@@ -73,21 +78,37 @@ async function seed() {
   }
 }
 
-/** One round: a fresh server and database, oha on the target, then everything stopped. */
-async function round(target: Target): Promise<Round> {
+/** Caddy in front of the server, compressing as in production; its state goes in `dir`, not the home directory. */
+async function proxy(dir: string) {
+  const config = join(dir, "Caddyfile");
+  await Bun.write(
+    config,
+    `{\n\tadmin off\n\tauto_https off\n}\n:${PROXY_PORT} {\n\tencode zstd gzip\n\treverse_proxy 127.0.0.1:${PORT}\n}\n`,
+  );
+  const caddy = spawn(["caddy", "run", "--config", config, "--adapter", "caddyfile"], PROXY_CPUS, {
+    env: { XDG_DATA_HOME: dir, XDG_CONFIG_HOME: dir },
+  });
+  await ready(PROXY_PORT, performance.now());
+  return caddy;
+}
+
+/** One round: a fresh server and database (and Caddy, when proxied), oha on the target, then everything stopped. */
+async function round(target: Target, proxied: boolean): Promise<Round> {
   const data = await mkdtemp(join(tmpdir(), "bench-"));
   const started = performance.now();
   const server = spawn(["bun", "server.js"], SERVER_CPU, {
     env: { NODE_ENV: "production", PORT: String(PORT), RATE_LIMIT: "0", DATABASE_PATH: join(data, "app.db") },
   });
+  let caddy: Bun.Subprocess | undefined;
   try {
-    const readyMs = await ready(started);
+    const readyMs = await ready(PORT, started);
     await seed();
+    if (proxied) caddy = await proxy(data);
     const body = target.body ? ["-m", target.method, "-H", "content-type: application/json", "-d", target.body] : [];
     const load = spawn(
       ["oha", "-z", `${SECONDS}s`, "-c", String(CONNECTIONS), "--no-tui", "--output-format", "json"].concat([
         ...body,
-        `http://127.0.0.1:${PORT}${target.path}`,
+        `http://127.0.0.1:${proxied ? PROXY_PORT : PORT}${target.path}`,
       ]),
       LOAD_CPUS,
       { read: true },
@@ -97,6 +118,8 @@ async function round(target: Target): Promise<Round> {
     const errors = Object.entries(statuses).reduce((sum, [code, n]) => (Number(code) >= 400 ? sum + n : sum), 0);
     return { rps: report.summary.requestsPerSec, p99Ms: report.latencyPercentiles.p99 * 1000, readyMs, errors };
   } finally {
+    caddy?.kill();
+    await caddy?.exited;
     server.kill();
     await server.exited;
     await rm(data, { recursive: true, force: true });
@@ -122,6 +145,7 @@ async function bundlePath() {
 }
 
 if (!Bun.which("oha")) throw new Error("oha isn't installed: see https://github.com/hatoo/oha#installation");
+if (!Bun.which("caddy")) throw new Error("caddy isn't installed: see https://caddyserver.com/docs/install");
 
 /** The power profile, where powerprofilesctl reports one: a power-saving one can cut every number by half or more. */
 const profile = Bun.which("powerprofilesctl")
@@ -139,18 +163,22 @@ const targets: Target[] = [
   { label: "`POST /api/notes`", method: "POST", path: "/api/notes", body: '{"text":"A note from the benchmark"}' },
 ];
 
-const rows: string[] = [];
-const readies: number[] = [];
-for (const target of targets) {
+/** One cell of the table: the target's rounds, straight or behind Caddy. */
+async function cell(target: Target, proxied: boolean): Promise<string> {
   const rounds: Round[] = [];
-  for (let i = 0; i < ROUNDS; i++) rounds.push(await round(target));
+  for (let i = 0; i < ROUNDS; i++) rounds.push(await round(target, proxied));
   const rps = spread(rounds.map((r) => r.rps));
   const p99 = spread(rounds.map((r) => r.p99Ms));
   const errors = rounds.reduce((sum, r) => sum + r.errors, 0);
   readies.push(...rounds.map((r) => r.readyMs));
-  const row = `| ${target.label} | ${rate(rps.median)} req/s [${rate(rps.min)}–${rate(rps.max)}], p99 ${p99.median.toFixed(1)} ms |`;
-  rows.push(errors ? `${row} ${errors} errors` : row);
-  console.log(rows.at(-1));
+  const text = `${rate(rps.median)} req/s [${rate(rps.min)}–${rate(rps.max)}], p99 ${p99.median.toFixed(1)} ms`;
+  return errors ? `${text}, ${errors} errors` : text;
+}
+
+const readies: number[] = [];
+console.log("| | Built (`dist/`) | Behind Caddy (`encode zstd gzip`) |\n| --- | --- | --- |");
+for (const target of targets) {
+  console.log(`| ${target.label} | ${await cell(target, false)} | ${await cell(target, true)} |`);
 }
 
 const readyMs = spread(readies);

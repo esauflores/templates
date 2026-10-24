@@ -63,7 +63,7 @@ synchronous, so the services are plain functions.
 
 - **Tables** belong to their module, and only its service queries them.
 - **Settings** (`core/db.ts`): WAL, `synchronous = NORMAL` (a power cut can lose the last commits, never the file) and
-  foreign keys, each checked at start.
+  foreign keys, each checked at start, and a 5 s `busy_timeout`, so another connection writing the file is waited for.
 - **Queries that run on most requests are prepared once**, with `sql.placeholder(…)` for the values, as in
   `notes.service.ts`.
 - **Migrations**: after changing a table, `bun run db:generate` writes the SQL into `core/migrations/`; commit it. The

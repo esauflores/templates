@@ -15,13 +15,26 @@ const HASHED = "public, max-age=31536000, immutable";
 const REVALIDATE = "no-cache";
 
 /**
+ * The page's own security headers, as secureHeaders() sets them on /api: no sniffing a file's type, no framing by
+ * another site, and only the origin sent along when a link leaves it. Fixed, like the files, so they cost nothing.
+ */
+const SECURITY = {
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "SAMEORIGIN",
+  "referrer-policy": "strict-origin-when-cross-origin",
+};
+
+/**
  * The web app's routes for Bun.serve. In dev, the page is Bun's to bundle as it's requested. Built ahead of time
  * (scripts/build.ts), it lists its files in dist/ instead: each is read once here and answered from memory, as Bun would
  * otherwise read the file again on every request. index.html answers every other path, so client-side routes load.
  * - Each file is one fixed answer, the same bytes for every client, so no code runs per request: Bun answers it on its
- *   fast path and adds the ETag, answering 304 when the client has that version. Compression is the reverse proxy's job
- *   (see "Docker" in the README), not this process's.
+ *   fast path and adds the ETag, answering 304 when the client has that version.
+ * - A file with a gzip copy (scripts/build.ts) is always answered with it, as every browser accepts gzip: compressed
+ *   once at build, rather than on every request by this process or the proxy, which passes it through as it is.
  * - The files in the web app's public/ are answered at their own paths too (/robots.txt), as Vite does.
+ * - Each hashed file's source map (the build's `sourcemap: "linked"`) is answered next to it, where the file's last
+ *   line points DevTools.
  * - A built page lists its files relative to the built server (dist/server.js, which this file is bundled into), so
  *   they're read from there, and the server runs from any working directory.
  */
@@ -35,8 +48,14 @@ export async function pageRoutes(page: HTMLBundle): Promise<Record<string, HTMLB
 
   for (const file of page.files) {
     const isPage = file.loader === "html";
-    const headers = { ...file.headers, "cache-control": isPage ? REVALIDATE : HASHED };
-    routes[isPage ? "/*" : `/${file.path.replace(/^\.\//, "")}`] = await fromMemory(built(file.path), headers);
+    const headers = { ...file.headers, ...SECURITY, "cache-control": isPage ? REVALIDATE : HASHED };
+    const route = `/${file.path.replace(/^\.\//, "")}`;
+    routes[isPage ? "/*" : route] = await fromMemory(built(file.path), headers);
+
+    const map = `${built(file.path)}.map`;
+    if (!isPage && existsSync(map)) {
+      routes[`${route}.map`] = await fromMemory(map, { "content-type": "application/json", "cache-control": HASHED });
+    }
   }
   return routes;
 }
@@ -49,14 +68,18 @@ async function publicRoutes(dir: string, page: HTMLBundle): Promise<Record<strin
   const routes: Record<string, Response> = {};
   if (!existsSync(dir)) return routes;
   for await (const name of new Bun.Glob("**/*").scan({ cwd: dir, dot: true })) {
+    if (name.endsWith(".gz")) continue;
     const path = join(dir, name);
-    const headers = { "content-type": Bun.file(path).type, "cache-control": REVALIDATE };
+    const headers = { "content-type": Bun.file(path).type, ...SECURITY, "cache-control": REVALIDATE };
     routes[`/${name}`] = page.files ? await fromMemory(path, headers) : new Response(Bun.file(path), { headers });
   }
   return routes;
 }
 
-/** A file's response, read once and answered from memory. */
+/** A file's response, read once and answered from memory: its gzip copy (scripts/build.ts) when there is one. */
 async function fromMemory(path: string, headers: Record<string, string>): Promise<Response> {
-  return new Response(await Bun.file(path).bytes(), { headers });
+  const gzip = Bun.file(`${path}.gz`);
+  const compressed = await gzip.exists();
+  const body = await (compressed ? gzip : Bun.file(path)).bytes();
+  return new Response(body, { headers: compressed ? { ...headers, "content-encoding": "gzip" } : headers });
 }

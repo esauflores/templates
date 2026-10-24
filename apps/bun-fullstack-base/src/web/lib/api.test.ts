@@ -2,9 +2,9 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vite-plus/test";
 
 import { api, ApiError, call } from "@/web/lib/api.ts";
-import { worker } from "@/web/mocks.ts";
+import { worker } from "@/web/mocks/worker.ts";
 
-/** Every answer here comes from mocks.ts (MSW, in the browser): no server, no database. */
+/** Every answer here comes from mocks/worker.ts (MSW, in the browser): no server, no database. */
 describe("call", () => {
   it("returns the typed body of a 2xx answer", async () => {
     expect(await call(api.hello[":name"].$get({ param: { name: "Ada" } }))).toEqual({ message: "Hello, Ada!" });
