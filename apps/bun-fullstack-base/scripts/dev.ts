@@ -4,9 +4,8 @@ import { join } from "node:path";
 import { compileCss, root } from "./css.ts";
 
 /**
- * `bun run dev`: one `bun --hot` server for the API and the page, and the stylesheet rebuilt as src/web changes.
- * Tailwind's own `--watch` wants watchman or @parcel/watcher's native binary, which some installs block, so this
- * watches with node:fs and runs the CLI instead: about a tenth of a second, debounced.
+ * `bun run dev`: one `bun --hot` server, with the stylesheet rebuilt as src/web changes. Watches with node:fs rather
+ * than Tailwind's `--watch`, which needs a native binary some installs block.
  */
 
 /** Builds run one after another, never two at once; a burst of edits is one build. */

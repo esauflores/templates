@@ -4,12 +4,8 @@ import { defineConfig } from "vite-plus";
 import { playwright } from "vite-plus/test/browser-playwright";
 
 /**
- * Vite+ checks and tests the code: `vp check` formats, lints and type-checks everything, with tsconfig.json (and
- * src/web/tsconfig.json, which swaps Bun's types for DOM and JSX). `vp test` runs the tests next to the code they test:
- * the API tests on Bun (no DOM), the web tests in headless Chromium through Playwright; each API test file gets a
- * database of its own, in memory. The web tests' API is mocked in the browser by MSW (src/web/mocks/worker.ts, started
- * by src/web/mocks/setup.ts), so they need no server, port or database. Serving and bundling the web app is Bun's job,
- * not Vite's (src/server.ts), and the stylesheet is Tailwind's own CLI (scripts/css.ts).
+ * Vite+ checks and tests the code: `vp check` formats, lints and type-checks; `vp test` runs the API tests on Bun and
+ * the web tests in headless Chromium. Bun serves and bundles the web app (src/server.ts), not Vite.
  */
 const root = fileURLToPath(new URL(".", import.meta.url));
 

@@ -6,17 +6,11 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * The HTTP benchmark behind the README's table: the built server (dist/) under load from
- * [oha](https://github.com/hatoo/oha), each route for ROUNDS rounds, each round on a fresh server and a fresh copy of
- * a database of NOTES notes, then the median and the range. `bun run bench` builds first, then runs this.
- * - The database is made once: the server's migrations, then the notes in one transaction, as a million through the
- *   API would take most of a minute a round.
- * - Each route twice: straight to the server, then behind [Caddy](https://caddyserver.com) compressing the answers
- *   (`encode zstd gzip`), as the README has it in production, so the second column is what a client gets.
- * - The server is pinned to one core, Caddy to another and oha to the rest (Linux, with taskset), so the server's
- *   numbers are one core's.
- * - The API runs without its rate limit (RATE_LIMIT=0), as all the load comes from one client.
- * - Run it on a quiet machine, plugged in, on a performance power profile: a power-saving one halves every number.
+ * The HTTP benchmark behind the README's table: [oha](https://github.com/hatoo/oha) loads the built server (dist/) per
+ * route, ROUNDS rounds each, on a fresh server and a copy of a database of NOTES notes. `bun run bench` builds first.
+ * - Each route also runs behind Caddy compressing the answers, as in production.
+ * - The server and proxy are pinned to their own CPUs (taskset, Linux), and the rate limit is off.
+ * - Run it on a quiet machine on a performance power profile: a power-saving one halves every number.
  */
 const ROUNDS = 3;
 const NOTES = 1_000_000;

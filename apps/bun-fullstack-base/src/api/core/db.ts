@@ -12,16 +12,12 @@ const path = config().DATABASE_PATH;
 if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
 
 /**
- * The database: SQLite inside Bun (bun:sqlite), in the process, with Drizzle's typed queries. They're synchronous: a
- * query blocks the process for its length, with no round trip to wait on. Each module declares its tables in
- * `<module>.tables.ts`.
- * - journal_mode = WAL: readers don't wait for the writer. A filesystem without WAL support (NFS, some bind mounts)
- *   silently keeps the old mode, which the check below turns into a failure at start rather than slow writes.
- * - synchronous = NORMAL syncs the disk at checkpoints, not on every commit: about 40 times the writes a second of
- *   FULL. A crash of the process loses nothing; a power cut can lose the last commits, never the file.
- * - foreign_keys = ON makes a column's `.references()` hold (SQLite leaves it off by default).
- * - busy_timeout = 5000: another connection writing the file (the old container in a rolling deploy, a backup, the
- *   sqlite3 CLI) is waited for, up to 5 s, rather than failing at once with SQLITE_BUSY.
+ * SQLite inside Bun (bun:sqlite) with Drizzle's typed queries. Queries are synchronous. Each module declares its
+ * tables in `<module>.tables.ts`.
+ * - journal_mode = WAL: readers don't wait for the writer. The check below fails start on a filesystem that refuses it.
+ * - synchronous = NORMAL: syncs at checkpoints, not every commit. A process crash loses nothing.
+ * - foreign_keys = ON: enforces `.references()`, which SQLite leaves off by default.
+ * - busy_timeout = 5000: waits up to 5 s for another writer instead of failing with SQLITE_BUSY.
  */
 export const db = drizzle(path);
 

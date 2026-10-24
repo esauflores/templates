@@ -4,19 +4,9 @@ import { join } from "node:path";
 import { compileCss, root } from "./css.ts";
 
 /**
- * The production build: the page's stylesheet compiled by Tailwind, then server.ts with everything it imports, the API
- * and the page included, bundled into dist/. The page's TSX becomes hashed files next to the server, which serves them
- * from there, so production installs nothing and bundles nothing at runtime.
- * - root is src/, so dist/ mirrors it (dist/server.js, dist/web/index.html), and publicPath makes the page link its
- *   files from / on any route.
- * - The web app's public/ is copied as is, for static.ts to answer its files at their own paths, and the API's
- *   migrations into dist/migrations/, next to the bundled server, as they're next to core/db.ts in the source.
- * - The database is SQLite from Bun itself (bun:sqlite), so dist/ has no addon to carry or load, and it builds for
- *   any platform Bun does.
- * - The page's text files get a gzip copy, compressed once here at the highest level, which static.ts answers as is:
- *   about a third of the bytes, with no compression per request (see "Benchmark" in the README).
- * - The JavaScript and the stylesheet are minified (Tailwind compiles it unminified); index.html is kept as written.
- * - NODE_ENV is inlined, which turns off the dev server in server.ts and gives React's production build.
+ * The production build: compiles the stylesheet, then bundles server.ts (with the API and the page) into dist/, which
+ * then runs without node_modules. Text files get a gzip copy that static.ts serves as is. NODE_ENV is inlined as
+ * production.
  */
 const outdir = join(root, "dist");
 await rm(outdir, { recursive: true, force: true });
